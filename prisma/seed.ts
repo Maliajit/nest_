@@ -10,9 +10,13 @@ async function main() {
   const adminPassword = 'password123';
   const hashedPassword = await bcrypt.hash(adminPassword, 10);
 
-  const admin = await prisma.admin.upsert({
+  const admin1 = await prisma.admin.upsert({
     where: { email: 'admin@fylex.com' },
-    update: {},
+    update: {
+      password: hashedPassword,
+      name: 'Fylex Admin',
+      status: 1,
+    },
     create: {
       name: 'Fylex Admin',
       email: 'admin@fylex.com',
@@ -22,7 +26,27 @@ async function main() {
     },
   });
 
-  console.log(`✅ Admin created with email: ${admin.email} and password: ${adminPassword}`);
+  // 1.2 Create Secondary Admin
+  const admin2Password = 'admin@123';
+  const admin2HashedPassword = await bcrypt.hash(admin2Password, 10);
+  const admin2 = await prisma.admin.upsert({
+    where: { email: 'admin@gmail.com' },
+    update: {
+      password: admin2HashedPassword,
+      name: 'Primary Admin',
+      status: 1,
+    },
+    create: {
+      name: 'Primary Admin',
+      email: 'admin@gmail.com',
+      password: admin2HashedPassword,
+      role: 'admin',
+      status: 1,
+    },
+  });
+
+  console.log(`✅ Admin created with email: ${admin1.email} and password: ${adminPassword}`);
+  console.log(`✅ Admin created with email: ${admin2.email} and password: ${admin2Password}`);
 
   // 2. Create sample Category
   const category = await prisma.category.upsert({

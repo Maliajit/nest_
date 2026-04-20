@@ -32,16 +32,15 @@ async function main() {
   const product = await prisma.product.create({
     data: {
       name: 'Fylex Chrono X1',
+      slug: 'fylex-chrono-x1',
       sku: 'FYLEX-CHRONO-X1',
       shortDescription: 'The pinnacle of craftsmanship and design.',
       description: 'A masterpiece of precision engineering, the Fylex Chrono X1 represents the zenith of our watchmaking heritage.',
       sellingPrice: new Prisma.Decimal(125000),
-      costPrice: new Prisma.Decimal(85000),
-      stockQty: 10,
-      alertQty: 2,
+      qty: 10,
       status: 'active',
-      isFeatured: 1,
-      isBestseller: 1,
+      isFeatured: true,
+      isBestseller: true,
       mainCategoryId: category.id,
       brandId: brand.id,
       heroImage: '/assets/fylex-watch-v2/goldwatch.png',
@@ -52,7 +51,7 @@ async function main() {
           {
             sku: 'FY-X1-GOLD-DIAMOND',
             price: new Prisma.Decimal(155000),
-            stockQty: 5,
+            qty: 5,
           }
         ]
       }
