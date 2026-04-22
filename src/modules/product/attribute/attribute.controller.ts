@@ -10,6 +10,23 @@ import { ApiTags, ApiOperation } from '@nestjs/swagger';
 export class AttributeController {
   constructor(private readonly attributeService: AttributeService) {}
 
+  // --- Attribute Value Routes ---
+
+  @Put('values/:valueId')
+  @ApiOperation({ summary: 'Update an attribute value' })
+  updateValue(@Param('valueId') valueId: string, @Body() updateAttributeValueDto: UpdateAttributeValueDto) {
+    return this.attributeService.updateValue(valueId, updateAttributeValueDto);
+  }
+
+  @Delete('values/:valueId')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Delete an attribute value' })
+  removeValue(@Param('valueId') valueId: string) {
+    return this.attributeService.removeValue(valueId);
+  }
+
+  // --- Attribute Routes ---
+
   @Get()
   @ApiOperation({ summary: 'Get all attributes' })
   findAll() {
@@ -41,24 +58,9 @@ export class AttributeController {
     return this.attributeService.remove(id);
   }
 
-  // --- Attribute Value Routes ---
-
   @Post(':id/values')
   @ApiOperation({ summary: 'Add a value to an attribute' })
   addValue(@Param('id') id: string, @Body() createAttributeValueDto: CreateAttributeValueDto) {
     return this.attributeService.createValue(id, createAttributeValueDto);
-  }
-
-  @Put('values/:valueId')
-  @ApiOperation({ summary: 'Update an attribute value' })
-  updateValue(@Param('valueId') valueId: string, @Body() updateAttributeValueDto: UpdateAttributeValueDto) {
-    return this.attributeService.updateValue(valueId, updateAttributeValueDto);
-  }
-
-  @Delete('values/:valueId')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Delete an attribute value' })
-  removeValue(@Param('valueId') valueId: string) {
-    return this.attributeService.removeValue(valueId);
   }
 }

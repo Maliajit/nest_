@@ -167,5 +167,6 @@ export class UpdateProductDto {
   heroImage?: string;
 
   @IsOptional()
+  @IsBoolean()
   isActive?: boolean;
 }

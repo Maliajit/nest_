@@ -167,5 +167,6 @@ export class CreateProductDto {
   heroImage?: string;
 
   @IsOptional()
+  @IsBoolean()
   isActive?: boolean;
 }

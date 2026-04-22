@@ -10,7 +10,8 @@ export class CreateBrandDto {
   slug: string;
 
   @IsOptional()
-  logoId?: number | string;
+  @IsNumber()
+  logoId?: number;
 
   @IsOptional()
   @IsString()
@@ -39,4 +40,7 @@ export class CreateBrandDto {
   @IsOptional()
   @IsString()
   metaKeywords?: string;
+
+  @IsOptional()
+  status?: string | number;
 }

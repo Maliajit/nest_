@@ -9,4 +9,9 @@ export class DashboardController {
   async getStats() {
     return this.systemService.getDashboardStats();
   }
+
+  @Get()
+  async getDashboard() {
+    return this.systemService.getDashboardStats();
+  }
 }

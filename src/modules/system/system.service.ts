@@ -216,17 +216,37 @@ export class SystemService {
 
   async createTaxRate(data: any) {
     let taxClassId = data.taxClassId;
+    
+    // Ensure at least one tax class exists
     if (!taxClassId) {
       const defaultClass = await this.prisma.taxClass.findFirst({ where: { isDefault: 1 } });
-      taxClassId = defaultClass?.id;
+      if (defaultClass) {
+        taxClassId = defaultClass.id;
+      } else {
+        // Fallback to any class if no default
+        const anyClass = await this.prisma.taxClass.findFirst();
+        if (anyClass) {
+          taxClassId = anyClass.id;
+        } else {
+          // Create an initial tax class if none exist at all
+          const newClass = await this.prisma.taxClass.create({
+            data: {
+              name: 'Standard Tax',
+              code: 'standard_tax',
+              isDefault: 1,
+            }
+          });
+          taxClassId = newClass.id;
+        }
+      }
     }
 
     const taxRate = await this.prisma.taxRate.create({
       data: {
-        name: data.name,
-        rate: data.rate,
+        name: String(data.name),
+        rate: Number(data.rate) || 0,
         isActive: data.isActive ? 1 : 0,
-        taxClassId: taxClassId || 1, 
+        taxClassId: BigInt(taxClassId), 
         countryCode: data.countryCode || 'IN',
       },
       include: { taxClass: true }
@@ -235,13 +255,16 @@ export class SystemService {
   }
 
   async updateTaxRate(id: number, data: any) {
+    const updateData: any = {};
+    if (data.name !== undefined) updateData.name = String(data.name);
+    if (data.rate !== undefined) updateData.rate = Number(data.rate);
+    if (data.isActive !== undefined) updateData.isActive = data.isActive ? 1 : 0;
+    if (data.taxClassId !== undefined) updateData.taxClassId = BigInt(data.taxClassId);
+    if (data.countryCode !== undefined) updateData.countryCode = String(data.countryCode);
+
     const updated = await this.prisma.taxRate.update({
-      where: { id },
-      data: {
-        name: data.name,
-        rate: data.rate,
-        isActive: data.isActive !== undefined ? (data.isActive ? 1 : 0) : undefined,
-      },
+      where: { id: BigInt(id) },
+      data: updateData,
       include: { taxClass: true }
     });
     return { success: true, data: { ...updated, isActive: updated.isActive === 1 } };

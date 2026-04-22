@@ -43,6 +43,10 @@ export class CreateAttributeDto {
   @IsOptional()
   status?: string = 'active';
 
+  @IsBoolean()
+  @IsOptional()
+  isActive?: boolean = true;
+
   @IsArray()
   @IsOptional()
   @ValidateNested({ each: true })

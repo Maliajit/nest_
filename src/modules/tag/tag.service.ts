@@ -9,8 +9,12 @@ export class TagService {
 
   async createTag(dto: CreateTagDto) {
     try {
+      const { status, ...rest } = dto;
       const tag = await this.prisma.tag.create({
-        data: dto,
+        data: {
+          ...rest,
+          isActive: (status !== undefined) ? (status === 1) : (rest.isActive ?? true),
+        },
       });
       return { success: true, data: tag };
     } catch (error) {
@@ -75,9 +79,13 @@ export class TagService {
 
   async updateTag(id: string | number, dto: UpdateTagDto) {
     try {
+      const { status, ...rest } = dto;
       const tag = await this.prisma.tag.update({
         where: { id: BigInt(id) },
-        data: dto,
+        data: {
+          ...rest,
+          ...(status !== undefined ? { isActive: status === 1 } : {}),
+        },
       });
       return { success: true, data: tag };
     } catch (error) {

@@ -51,7 +51,7 @@ export class AttributeService {
   }
 
   async create(createAttributeDto: CreateAttributeDto) {
-    const { values, ...rest } = createAttributeDto;
+    const { values, isActive, ...rest } = createAttributeDto;
     
     // Ensure code is a string
     const code = rest.code || (rest.name ? rest.name.toLowerCase().replace(/ /g, '_') : `attr_${Date.now()}`);
@@ -60,7 +60,7 @@ export class AttributeService {
       data: {
         ...rest,
         code,
-        status: createAttributeDto.status || 'active',
+        status: createAttributeDto.status || (isActive === false ? 'inactive' : 'active'),
         values: {
           create: values?.map(val => ({
             ...val,
@@ -83,12 +83,13 @@ export class AttributeService {
   }
 
   async update(id: number | string, updateAttributeDto: UpdateAttributeDto) {
-    const { values, ...rest } = updateAttributeDto as any;
+    const { values, isActive, ...rest } = updateAttributeDto as any;
 
     const attribute = await this.prisma.attribute.update({
       where: { id: BigInt(id) },
       data: {
         ...rest,
+        ...(isActive !== undefined ? { status: isActive ? 'active' : 'inactive' } : {}),
       },
     });
 

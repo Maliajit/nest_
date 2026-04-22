@@ -7,38 +7,6 @@ import { ApiTags, ApiOperation } from '@nestjs/swagger';
 export class SpecificationController {
   constructor(private readonly specificationService: SpecificationService) {}
 
-  // --- Specifications ---
-  @Get()
-  @ApiOperation({ summary: 'Get all specifications' })
-  findAll() {
-    return this.specificationService.findAll();
-  }
-
-  @Get(':id')
-  @ApiOperation({ summary: 'Get specification by ID' })
-  findOne(@Param('id') id: string) {
-    return this.specificationService.findOne(id);
-  }
-
-  @Post()
-  @ApiOperation({ summary: 'Create a new specification' })
-  create(@Body() data: any) {
-    return this.specificationService.create(data);
-  }
-
-  @Put(':id')
-  @ApiOperation({ summary: 'Update a specification' })
-  update(@Param('id') id: string, @Body() data: any) {
-    return this.specificationService.update(id, data);
-  }
-
-  @Delete(':id')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Delete a specification' })
-  remove(@Param('id') id: string) {
-    return this.specificationService.remove(id);
-  }
-
   // --- Groups ---
   @Get('groups')
   @ApiOperation({ summary: 'Get all specification groups' })
@@ -89,5 +57,63 @@ export class SpecificationController {
     @Param('specId') specId: string,
   ) {
     return this.specificationService.removeSpecFromGroup(groupId, specId);
+  }
+
+  // --- Specifications ---
+  @Get()
+  @ApiOperation({ summary: 'Get all specifications' })
+  findAll() {
+    return this.specificationService.findAll();
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Get specification by ID' })
+  findOne(@Param('id') id: string) {
+    return this.specificationService.findOne(id);
+  }
+
+  @Post()
+  @ApiOperation({ summary: 'Create a new specification' })
+  create(@Body() data: any) {
+    return this.specificationService.create(data);
+  }
+
+  @Put(':id')
+  @ApiOperation({ summary: 'Update a specification' })
+  update(@Param('id') id: string, @Body() data: any) {
+    return this.specificationService.update(id, data);
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Delete a specification' })
+  remove(@Param('id') id: string) {
+    return this.specificationService.remove(id);
+  }
+
+  // --- Specification Values ---
+  @Get(':id/values')
+  @ApiOperation({ summary: 'Get all values for a specification' })
+  findAllValues(@Param('id') id: string) {
+    return this.specificationService.findAllValues(id);
+  }
+
+  @Post(':id/values')
+  @ApiOperation({ summary: 'Create a new specification value' })
+  createValue(@Param('id') id: string, @Body() data: any) {
+    return this.specificationService.createValue(id, data);
+  }
+
+  @Put('values/:id')
+  @ApiOperation({ summary: 'Update a specification value' })
+  updateValue(@Param('id') id: string, @Body() data: any) {
+    return this.specificationService.updateValue(id, data);
+  }
+
+  @Delete('values/:id')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Delete a specification value' })
+  removeValue(@Param('id') id: string) {
+    return this.specificationService.removeValue(id);
   }
 }

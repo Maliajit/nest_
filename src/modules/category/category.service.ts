@@ -9,13 +9,14 @@ export class CategoryService {
   constructor(private prisma: PrismaService) {}
 
   async createCategory(dto: CreateCategoryDto) {
-    const { parentId, imageId, image, imageUrl, ...rest } = dto;
+    const { parentId, imageId, image, imageUrl, isActive, ...rest } = dto as any;
     
     const data: any = {
       ...rest,
       parentId: parentId ? BigInt(parentId) : null,
       imageId: imageId ? BigInt(imageId) : null,
       imageUrl: imageUrl || image || null,
+      status: dto.status ?? (isActive === false ? 0 : 1),
     };
 
     try {
@@ -116,7 +117,7 @@ export class CategoryService {
   }
 
   async updateCategory(id: string | number, dto: UpdateCategoryDto) {
-    const { parentId, imageId, image, imageUrl, ...rest } = dto;
+    const { parentId, imageId, image, imageUrl, isActive, ...rest } = dto as any;
     
     const data: any = { ...rest };
 
@@ -128,6 +129,9 @@ export class CategoryService {
     }
     if (imageUrl !== undefined || image !== undefined) {
       data.imageUrl = imageUrl || image || null;
+    }
+    if (isActive !== undefined) {
+      data.status = isActive ? 1 : 0;
     }
 
     try {

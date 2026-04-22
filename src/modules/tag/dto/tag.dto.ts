@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString, IsBoolean, IsOptional } from 'class-validator';
+import { IsNotEmpty, IsString, IsBoolean, IsOptional, IsNumber } from 'class-validator';
 import { Transform } from 'class-transformer';
 
 export class CreateTagDto {
@@ -23,14 +23,19 @@ export class CreateTagDto {
   icon?: string;
 
   @IsOptional()
-  @Transform(({ value }) => value === 'true' || value === true)
+  @Transform(({ value }) => value === 'true' || value === true || value === 1 || value === '1')
   @IsBoolean()
   isActive?: boolean;
 
   @IsOptional()
-  @Transform(({ value }) => value === 'true' || value === true)
+  @Transform(({ value }) => value === 'true' || value === true || value === 1 || value === '1')
   @IsBoolean()
   isFeatured?: boolean;
+
+  @IsOptional()
+  @Transform(({ value }) => Number(value))
+  @IsNumber()
+  status?: number;
 }
 
 export class UpdateTagDto {
@@ -55,12 +60,17 @@ export class UpdateTagDto {
   icon?: string;
 
   @IsOptional()
-  @Transform(({ value }) => value === 'true' || value === true)
+  @Transform(({ value }) => value === 'true' || value === true || value === 1 || value === '1')
   @IsBoolean()
   isActive?: boolean;
 
   @IsOptional()
-  @Transform(({ value }) => value === 'true' || value === true)
+  @Transform(({ value }) => value === 'true' || value === true || value === 1 || value === '1')
   @IsBoolean()
   isFeatured?: boolean;
+
+  @IsOptional()
+  @Transform(({ value }) => Number(value))
+  @IsNumber()
+  status?: number;
 }

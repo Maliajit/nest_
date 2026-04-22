@@ -72,12 +72,34 @@ export class CmsService {
   }
 
   async createBanner(data: any) {
-    const banner = await this.prisma.banner.create({ data });
+    const banner = await this.prisma.banner.create({
+        data: {
+            name: data.name || data.title || 'Untitled Banner',
+            title: data.title,
+            image: data.image,
+            link: data.link,
+            position: data.position || 'main',
+            sortOrder: Number(data.sortOrder) || 0,
+            isActive: data.isActive ?? true,
+        }
+    });
     return { success: true, data: banner };
   }
 
   async updateBanner(id: number, data: any) {
-    const banner = await this.prisma.banner.update({ where: { id }, data });
+    const updateData: any = {};
+    if (data.name !== undefined) updateData.name = data.name;
+    if (data.title !== undefined) updateData.title = data.title;
+    if (data.image !== undefined) updateData.image = data.image;
+    if (data.link !== undefined) updateData.link = data.link;
+    if (data.position !== undefined) updateData.position = data.position;
+    if (data.sortOrder !== undefined) updateData.sortOrder = Number(data.sortOrder);
+    if (data.isActive !== undefined) updateData.isActive = data.isActive;
+
+    const banner = await this.prisma.banner.update({
+      where: { id: BigInt(id) },
+      data: updateData,
+    });
     return { success: true, data: banner };
   }
 
@@ -136,10 +158,12 @@ export class CmsService {
     const list = await this.prisma.homeSection.findMany({
       orderBy: { sortOrder: 'asc' },
     });
-    // Frontend expects 'name' but backend has 'title'
+    // Frontend expects 'name' for 'title', 'status' for 'isActive', and 'order' for 'sortOrder'
     const mapped = list.map(s => ({
         ...s,
-        name: s.title
+        name: s.title,
+        status: s.isActive,
+        order: s.sortOrder
     }));
     return { success: true, data: mapped };
   }
@@ -153,21 +177,22 @@ export class CmsService {
         isActive: data.status ?? true,
       },
     });
-    return { success: true, data: { ...section, name: section.title } };
+    return { success: true, data: { ...section, name: section.title, status: section.isActive, order: section.sortOrder } };
   }
 
   async updateHomeSection(id: number | bigint, data: any) {
     const sId = BigInt(id);
+    const updateData: any = {};
+    if (data.name !== undefined) updateData.title = data.name;
+    if (data.type !== undefined) updateData.type = data.type;
+    if (data.order !== undefined) updateData.sortOrder = Number(data.order);
+    if (data.status !== undefined) updateData.isActive = data.status === true || data.status === 'true';
+
     const section = await this.prisma.homeSection.update({
       where: { id: sId },
-      data: {
-        title: data.name,
-        type: data.type,
-        sortOrder: data.order ? Number(data.order) : undefined,
-        isActive: data.status,
-      },
+      data: updateData,
     });
-    return { success: true, data: { ...section, name: section.title } };
+    return { success: true, data: { ...section, name: section.title, status: section.isActive, order: section.sortOrder } };
   }
 
   async deleteHomeSection(id: number | bigint) {

@@ -492,6 +492,9 @@ model Specification {
   code                  String                 @unique(map: "specifications_code_unique")
   type                  String                 @default("text")
   sortOrder             Int                    @default(0) @map("sort_order")
+  isRequired             Boolean                @default(false) @map("is_required")
+  isFilterable           Boolean                @default(true) @map("is_filterable")
+  isActive               Boolean                @default(true) @map("is_active")
   createdAt             DateTime?              @map("created_at")
   updatedAt             DateTime?              @map("updated_at")
   productSpecifications ProductSpecification[]

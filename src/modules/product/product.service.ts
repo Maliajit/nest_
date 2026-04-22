@@ -299,9 +299,13 @@ export class ProductService {
   }
 
   async updateProduct(id: string | number, dto: UpdateProductDto, imageFiles?: Array<Express.Multer.File>) {
-    const { brandId, mainCategoryId, ...rest } = dto;
+    const { brandId, mainCategoryId, isActive, ...rest } = dto as any;
     
     const data: any = { ...rest };
+
+    if (isActive !== undefined) {
+      data.status = isActive ? 'active' : 'inactive';
+    }
 
     if (rest.price !== undefined) {
       data.price = rest.price.toString();

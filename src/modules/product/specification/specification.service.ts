@@ -8,6 +8,11 @@ export class SpecificationService {
   // --- Specification Methods ---
   async findAll() {
     const specs = await this.prisma.specification.findMany({
+      include: {
+        _count: {
+          select: { values: true },
+        },
+      },
       orderBy: { sortOrder: 'asc' },
     });
     return { success: true, data: specs };
@@ -28,6 +33,9 @@ export class SpecificationService {
         code: data.code || data.name.toLowerCase().replace(/ /g, '_'),
         type: data.type || 'text',
         sortOrder: data.sortOrder || 0,
+        isRequired: data.isRequired === true || data.isRequired === 1,
+        isFilterable: data.isFilterable === true || data.isFilterable === 1,
+        isActive: data.isActive === true || data.isActive === 1,
       },
     });
     return { success: true, data: spec };
@@ -41,6 +49,9 @@ export class SpecificationService {
         code: data.code,
         type: data.type,
         sortOrder: data.sortOrder,
+        isRequired: data.isRequired === true || data.isRequired === 1,
+        isFilterable: data.isFilterable === true || data.isFilterable === 1,
+        isActive: data.isActive === true || data.isActive === 1,
       },
     });
     return { success: true, data: spec };
@@ -65,12 +76,16 @@ export class SpecificationService {
       orderBy: { sortOrder: 'asc' },
     });
     
-    // Map to include a simple specs_count
+    // Map to include a simple specs_count and items for the view modal
     return { 
       success: true, 
       data: groups.map(g => ({
         ...g,
-        specs_count: g.specifications.length
+        specs_count: g.specifications.length,
+        items: g.specifications.map(s => ({
+          ...s.specification,
+          linkSortOrder: s.sortOrder
+        }))
       })) 
     };
   }
@@ -96,17 +111,47 @@ export class SpecificationService {
         sortOrder: data.sortOrder || 0,
       },
     });
+
+    if (data.specificationIds && Array.isArray(data.specificationIds)) {
+      const mappings = data.specificationIds.map((specId, index) => ({
+        specificationGroupId: group.id,
+        specificationId: BigInt(specId),
+        sortOrder: index,
+      }));
+      await this.prisma.specGroupSpec.createMany({
+        data: mappings,
+      });
+    }
+
     return { success: true, data: group };
   }
 
   async updateGroup(id: number | string, data: any) {
+    const groupId = BigInt(id);
     const group = await this.prisma.specificationGroup.update({
-      where: { id: BigInt(id) },
+      where: { id: groupId },
       data: {
         name: data.name,
         sortOrder: data.sortOrder,
       },
     });
+
+    if (data.specificationIds && Array.isArray(data.specificationIds)) {
+      // Simple sync: delete all and recreate
+      await this.prisma.specGroupSpec.deleteMany({
+        where: { specificationGroupId: groupId },
+      });
+
+      const mappings = data.specificationIds.map((specId, index) => ({
+        specificationGroupId: groupId,
+        specificationId: BigInt(specId),
+        sortOrder: index,
+      }));
+      await this.prisma.specGroupSpec.createMany({
+        data: mappings,
+      });
+    }
+
     return { success: true, data: group };
   }
 
@@ -139,5 +184,45 @@ export class SpecificationService {
       },
     });
     return { success: true, message: 'Specification removed from group' };
+  }
+
+  // --- Specification Value Methods ---
+  async findAllValues(specId: number | string) {
+    const values = await this.prisma.specificationValue.findMany({
+      where: { specificationId: BigInt(specId) },
+      orderBy: { sortOrder: 'asc' },
+    });
+    return { success: true, data: values };
+  }
+
+  async createValue(specId: number | string, data: any) {
+    const value = await this.prisma.specificationValue.create({
+      data: {
+        specificationId: BigInt(specId),
+        value: data.value,
+        sortOrder: data.sortOrder || 0,
+        status: data.status !== undefined ? data.status : 1,
+      },
+    });
+    return { success: true, data: value };
+  }
+
+  async updateValue(id: number | string, data: any) {
+    const value = await this.prisma.specificationValue.update({
+      where: { id: BigInt(id) },
+      data: {
+        value: data.value,
+        sortOrder: data.sortOrder,
+        status: data.status,
+      },
+    });
+    return { success: true, data: value };
+  }
+
+  async removeValue(id: number | string) {
+    await this.prisma.specificationValue.delete({
+      where: { id: BigInt(id) },
+    });
+    return { success: true, message: 'Value deleted' };
   }
 }

@@ -39,4 +39,7 @@ export class UpdateBrandDto {
   @IsOptional()
   @IsString()
   metaKeywords?: string;
+
+  @IsOptional()
+  status?: string | number;
 }

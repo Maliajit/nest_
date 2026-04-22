@@ -9,12 +9,17 @@ export class BrandService {
   constructor(private prisma: PrismaService) {}
 
   async createBrand(dto: CreateBrandDto) {
-    const { logoId, ...rest } = dto;
-    
     const data: any = {
-      ...rest,
-      logoId: logoId ? BigInt(logoId) : null,
-      isActive: dto.isActive ?? true,
+      name: dto.name,
+      slug: dto.slug,
+      description: dto.description,
+      isActive: dto.status !== undefined ? (String(dto.status) === '1') : (dto.isActive ?? true),
+      isFeatured: dto.isFeatured ? 1 : 0,
+      sortOrder: Number(dto.sortOrder) || 0,
+      metaTitle: dto.metaTitle,
+      metaDescription: dto.metaDescription,
+      metaKeywords: dto.metaKeywords,
+      logoId: dto.logoId ? BigInt(dto.logoId) : null,
     };
 
     try {
@@ -79,12 +84,24 @@ export class BrandService {
   }
 
   async updateBrand(id: string | number, dto: UpdateBrandDto) {
-    const { logoId, ...rest } = dto;
+    const data: any = {};
+    if (dto.name !== undefined) data.name = dto.name;
+    if (dto.slug !== undefined) data.slug = dto.slug;
+    if (dto.description !== undefined) data.description = dto.description;
+    if (dto.metaTitle !== undefined) data.metaTitle = dto.metaTitle;
+    if (dto.metaDescription !== undefined) data.metaDescription = dto.metaDescription;
+    if (dto.metaKeywords !== undefined) data.metaKeywords = dto.metaKeywords;
+    if (dto.sortOrder !== undefined) data.sortOrder = Number(dto.sortOrder);
+    if (dto.isFeatured !== undefined) data.isFeatured = dto.isFeatured ? 1 : 0;
     
-    const data: any = { ...rest };
+    if (dto.logoId !== undefined) {
+      data.logoId = dto.logoId ? BigInt(dto.logoId) : null;
+    }
 
-    if (logoId !== undefined) {
-      data.logoId = logoId ? BigInt(logoId) : null;
+    if (dto.status !== undefined) {
+      data.isActive = (String(dto.status) === '1');
+    } else if (dto.isActive !== undefined) {
+      data.isActive = dto.isActive;
     }
 
     try {

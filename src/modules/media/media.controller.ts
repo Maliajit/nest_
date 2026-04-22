@@ -14,7 +14,7 @@ export class MediaController {
   }
 
   @Post('upload')
-  @UseInterceptors(FilesInterceptor('files', 20, {
+  @UseInterceptors(FilesInterceptor('file', 20, {
     storage: diskStorage({
       destination: './uploads',
       filename: (req, file, cb) => {
