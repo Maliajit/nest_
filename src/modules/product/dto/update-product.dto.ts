@@ -192,4 +192,7 @@ export class UpdateProductDto {
   @IsOptional()
   @IsArray()
   gallery?: any[];
+
+  @IsOptional()
+  taxClassId?: number | string;
 }

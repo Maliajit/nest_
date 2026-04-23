@@ -203,80 +203,131 @@ export class SystemService {
   async getTaxes() {
     const taxes = await this.prisma.taxRate.findMany({
       where: { deletedAt: null },
-      include: { taxClass: true },
+      include: { taxClasses: true },
+      orderBy: { sortOrder: 'asc' },
     });
     
     const mapped = taxes.map(tax => ({
       ...tax,
-      isActive: tax.isActive === 1 || (tax.isActive as any) === true,
+      isActive: tax.isActive === 1,
     }));
 
     return { success: true, data: mapped };
   }
 
   async createTaxRate(data: any) {
-    let taxClassId = data.taxClassId;
-    
-    // Ensure at least one tax class exists
-    if (!taxClassId) {
-      const defaultClass = await this.prisma.taxClass.findFirst({ where: { isDefault: 1 } });
-      if (defaultClass) {
-        taxClassId = defaultClass.id;
-      } else {
-        // Fallback to any class if no default
-        const anyClass = await this.prisma.taxClass.findFirst();
-        if (anyClass) {
-          taxClassId = anyClass.id;
-        } else {
-          // Create an initial tax class if none exist at all
-          const newClass = await this.prisma.taxClass.create({
-            data: {
-              name: 'Standard Tax',
-              code: 'standard_tax',
-              isDefault: 1,
-            }
-          });
-          taxClassId = newClass.id;
-        }
-      }
-    }
-
+    const { taxClassIds, ...rest } = data;
     const taxRate = await this.prisma.taxRate.create({
       data: {
-        name: String(data.name),
-        rate: Number(data.rate) || 0,
-        isActive: data.isActive ? 1 : 0,
-        taxClassId: BigInt(taxClassId), 
-        countryCode: data.countryCode || 'IN',
+        name: String(rest.name),
+        code: rest.code || null,
+        description: rest.description || null,
+        rate: Number(rest.rate) || 0,
+        type: rest.type || 'percentage',
+        isActive: rest.isActive ? 1 : 0,
+        priority: Number(rest.priority) || 0,
+        sortOrder: Number(rest.sortOrder) || 0,
+        isCompound: !!rest.isCompound,
+        taxClasses: taxClassIds ? {
+          connect: taxClassIds.map((id: any) => ({ id: BigInt(id) }))
+        } : undefined
       },
-      include: { taxClass: true }
+      include: { taxClasses: true }
     });
     return { success: true, data: { ...taxRate, isActive: taxRate.isActive === 1 } };
   }
 
   async updateTaxRate(id: number, data: any) {
+    const { taxClassIds, ...rest } = data;
     const updateData: any = {};
-    if (data.name !== undefined) updateData.name = String(data.name);
-    if (data.rate !== undefined) updateData.rate = Number(data.rate);
-    if (data.isActive !== undefined) updateData.isActive = data.isActive ? 1 : 0;
-    if (data.taxClassId !== undefined) updateData.taxClassId = BigInt(data.taxClassId);
-    if (data.countryCode !== undefined) updateData.countryCode = String(data.countryCode);
+    if (rest.name !== undefined) updateData.name = String(rest.name);
+    if (rest.code !== undefined) updateData.code = rest.code;
+    if (rest.description !== undefined) updateData.description = rest.description;
+    if (rest.rate !== undefined) updateData.rate = Number(rest.rate);
+    if (rest.type !== undefined) updateData.type = rest.type;
+    if (rest.isActive !== undefined) updateData.isActive = rest.isActive ? 1 : 0;
+    if (rest.priority !== undefined) updateData.priority = Number(rest.priority);
+    if (rest.sortOrder !== undefined) updateData.sortOrder = Number(rest.sortOrder);
+    if (rest.isCompound !== undefined) updateData.isCompound = !!rest.isCompound;
+    
+    if (taxClassIds !== undefined) {
+      updateData.taxClasses = {
+        set: taxClassIds.map((tid: any) => ({ id: BigInt(tid) }))
+      };
+    }
 
     const updated = await this.prisma.taxRate.update({
       where: { id: BigInt(id) },
       data: updateData,
-      include: { taxClass: true }
+      include: { taxClasses: true }
     });
     return { success: true, data: { ...updated, isActive: updated.isActive === 1 } };
   }
 
   async deleteTaxRate(id: number) {
     await this.prisma.taxRate.update({
-      where: { id },
+      where: { id: BigInt(id) },
       data: { deletedAt: new Date() },
     });
     return { success: true };
   }
+
+  // Tax Classes logic
+  async getTaxClasses() {
+    const classes = await this.prisma.taxClass.findMany({
+      where: { deletedAt: null },
+      include: { taxRates: true },
+    });
+    return { success: true, data: classes };
+  }
+
+  async createTaxClass(data: any) {
+    const { taxRateIds, ...rest } = data;
+    const taxClass = await this.prisma.taxClass.create({
+      data: {
+        name: String(rest.name),
+        code: String(rest.code),
+        description: rest.description || null,
+        isDefault: rest.isDefault ? 1 : 0,
+        taxRates: taxRateIds ? {
+          connect: taxRateIds.map((id: any) => ({ id: BigInt(id) }))
+        } : undefined
+      },
+      include: { taxRates: true }
+    });
+    return { success: true, data: taxClass };
+  }
+
+  async updateTaxClass(id: number, data: any) {
+    const { taxRateIds, ...rest } = data;
+    const updateData: any = {};
+    if (rest.name !== undefined) updateData.name = String(rest.name);
+    if (rest.code !== undefined) updateData.code = String(rest.code);
+    if (rest.description !== undefined) updateData.description = rest.description;
+    if (rest.isDefault !== undefined) updateData.isDefault = rest.isDefault ? 1 : 0;
+    
+    if (taxRateIds !== undefined) {
+      updateData.taxRates = {
+        set: taxRateIds.map((rid: any) => ({ id: BigInt(rid) }))
+      };
+    }
+
+    const updated = await this.prisma.taxClass.update({
+      where: { id: BigInt(id) },
+      data: updateData,
+      include: { taxRates: true }
+    });
+    return { success: true, data: updated };
+  }
+
+  async deleteTaxClass(id: number) {
+    await this.prisma.taxClass.update({
+      where: { id: BigInt(id) },
+      data: { deletedAt: new Date() },
+    });
+    return { success: true };
+  }
+
 
   // Shipping Methods
   async getShippingMethods() {

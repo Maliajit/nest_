@@ -49,7 +49,7 @@ export class ProductService {
   }
 
   async createProduct(dto: CreateProductDto, imageFiles?: Array<Express.Multer.File>) {
-    const { brandId, mainCategoryId, ...rest } = dto;
+    const { brandId, mainCategoryId, taxClassId, ...rest } = dto;
     
     try {
       // Convert IDs to BigInt and decimals to string for Prisma
@@ -59,6 +59,7 @@ export class ProductService {
         sellingPrice: rest.price ? rest.price.toString() : '0',
         brandId: this.safeBigInt(brandId, 'brandId'),
         mainCategoryId: this.safeBigInt(mainCategoryId, 'mainCategoryId'),
+        taxClassId: this.safeBigInt(taxClassId, 'taxClassId'),
       };
 
     if (imageFiles && imageFiles.length > 0) {
@@ -106,6 +107,7 @@ export class ProductService {
       images: data.images || (dto as any).gallery?.map(g => g.url) || [],
       brandId: data.brandId,
       mainCategoryId: data.mainCategoryId || (dto as any).categoryId,
+      taxClassId: data.taxClassId,
       subtitle: data.subtitle,
       tagline: data.tagline,
       heritageText: data.heritageText,
@@ -312,6 +314,7 @@ export class ProductService {
         include: {
           brand: true,
           mainCategory: true,
+          taxClass: true,
           variants: true,
           _count: {
             select: { 
@@ -365,6 +368,7 @@ export class ProductService {
       include: {
         brand: true,
         mainCategory: true,
+        taxClass: true,
         variants: {
           include: {
             variantAttributes: {
@@ -449,6 +453,7 @@ export class ProductService {
         mainCategoryId, 
         isActive, 
         categoryId,
+        taxClassId,
         shortDesc,
         specifications, 
         tagIds, 
@@ -467,6 +472,7 @@ export class ProductService {
       if (rest.specialPrice !== undefined) prismaData.specialPrice = rest.specialPrice ? rest.specialPrice.toString() : null;
       
       if (brandId !== undefined) prismaData.brandId = this.safeBigInt(brandId, 'brandId');
+      if (taxClassId !== undefined) prismaData.taxClassId = this.safeBigInt(taxClassId, 'taxClassId');
       if (mainCategoryId !== undefined || categoryId !== undefined) {
         const catId = mainCategoryId || categoryId;
         prismaData.mainCategoryId = this.safeBigInt(catId, 'mainCategoryId');
@@ -490,7 +496,7 @@ export class ProductService {
         'price', 'sellingPrice', 'specialPrice', 'specialPriceStart', 'specialPriceEnd',
         'manageStock', 'qty', 'inStock', 'codAvailable', 'status', 'heroImage',
         'isFeatured', 'isNew', 'isBestseller', 'weight', 'length', 'width', 'height',
-        'metaTitle', 'metaDescription', 'metaKeywords', 'brandId', 'mainCategoryId',
+        'metaTitle', 'metaDescription', 'metaKeywords', 'brandId', 'mainCategoryId', 'taxClassId',
         'subtitle', 'tagline', 'heritageText', 'bgColor', 'accentColor', 'textColor', 
         'gradient', 'mistColor', 'images'
       ];

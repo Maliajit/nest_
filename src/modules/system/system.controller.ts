@@ -35,6 +35,26 @@ export class SystemController {
     return this.systemService.createTaxRate(data);
   }
 
+  @Get('taxes/classes')
+  async getTaxClasses() {
+    return this.systemService.getTaxClasses();
+  }
+
+  @Post('taxes/classes')
+  async createTaxClass(@Body() data: any) {
+    return this.systemService.createTaxClass(data);
+  }
+
+  @Put('taxes/classes/:id')
+  async updateTaxClass(@Param('id') id: string, @Body() data: any) {
+    return this.systemService.updateTaxClass(Number(id), data);
+  }
+
+  @Delete('taxes/classes/:id')
+  async deleteTaxClass(@Param('id') id: string) {
+    return this.systemService.deleteTaxClass(Number(id));
+  }
+
   @Put('taxes/:id')
   async updateTaxRate(@Param('id') id: string, @Body() data: any) {
     return this.systemService.updateTaxRate(Number(id), data);
@@ -44,6 +64,7 @@ export class SystemController {
   async deleteTaxRate(@Param('id') id: string) {
     return this.systemService.deleteTaxRate(Number(id));
   }
+
 
   @Get('shipping-methods')
   async getShippingMethods() {

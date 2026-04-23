@@ -15,6 +15,26 @@ export class TaxesController {
     return this.systemService.createTaxRate(data);
   }
 
+  @Get('classes')
+  async getTaxClasses() {
+    return this.systemService.getTaxClasses();
+  }
+
+  @Post('classes')
+  async createTaxClass(@Body() data: any) {
+    return this.systemService.createTaxClass(data);
+  }
+
+  @Put('classes/:id')
+  async updateTaxClass(@Param('id') id: string, @Body() data: any) {
+    return this.systemService.updateTaxClass(Number(id), data);
+  }
+
+  @Delete('classes/:id')
+  async deleteTaxClass(@Param('id') id: string) {
+    return this.systemService.deleteTaxClass(Number(id));
+  }
+
   @Put(':id')
   async updateTaxRate(@Param('id') id: string, @Body() data: any) {
     return this.systemService.updateTaxRate(Number(id), data);
@@ -25,3 +45,4 @@ export class TaxesController {
     return this.systemService.deleteTaxRate(Number(id));
   }
 }
+

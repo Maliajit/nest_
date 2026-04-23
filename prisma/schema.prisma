@@ -913,32 +913,36 @@ model TaxClass {
   updatedAt   DateTime? @map("updated_at")
   deletedAt   DateTime? @map("deleted_at")
   products    Product[]
-  rates       TaxRate[]
+  taxRates    TaxRate[] @relation("TaxClassToTaxRate")
 
   @@index([isDefault], map: "tax_classes_is_default_index")
   @@map("tax_classes")
 }
 
 model TaxRate {
-  id          BigInt    @id @default(autoincrement())
-  taxClassId  BigInt    @map("tax_class_id")
+  id          BigInt     @id @default(autoincrement())
   name        String
-  countryCode String?   @map("country_code")
-  stateCode   String?   @map("state_code")
-  zipCode     String?   @map("zip_code")
+  code        String?    @map("code")
+  description String?    @map("description")
+  countryCode String?    @map("country_code")
+  stateCode   String?    @map("state_code")
+  zipCode     String?    @map("zip_code")
   rate        Decimal
-  isActive    Int       @default(1) @map("is_active")
-  priority    Int       @default(0)
-  createdAt   DateTime? @map("created_at")
-  updatedAt   DateTime? @map("updated_at")
-  deletedAt   DateTime? @map("deleted_at")
-  taxClass    TaxClass  @relation(fields: [taxClassId], references: [id], onDelete: Cascade)
+  type        String     @default("percentage")
+  isActive    Int        @default(1) @map("is_active")
+  priority    Int        @default(0)
+  sortOrder   Int        @default(0) @map("sort_order")
+  isCompound  Boolean    @default(false) @map("is_compound")
+  createdAt   DateTime?  @map("created_at")
+  updatedAt   DateTime?  @map("updated_at")
+  deletedAt   DateTime?  @map("deleted_at")
+  taxClasses  TaxClass[] @relation("TaxClassToTaxRate")
 
-  @@index([taxClassId], map: "tax_rates_tax_class_id_index")
   @@index([isActive], map: "tax_rates_is_active_index")
   @@index([countryCode, stateCode], map: "tax_rates_country_code_state_code_index")
   @@map("tax_rates")
 }
+
 
 model ShippingZone {
   id        BigInt           @id @default(autoincrement())

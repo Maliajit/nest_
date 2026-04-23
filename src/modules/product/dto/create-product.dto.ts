@@ -191,4 +191,7 @@ export class CreateProductDto {
   @IsOptional()
   @IsArray()
   tagIds?: any[];
+
+  @IsOptional()
+  taxClassId?: number | string;
 }
