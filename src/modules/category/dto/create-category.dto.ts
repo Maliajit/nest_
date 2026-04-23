@@ -1,5 +1,22 @@
-import { IsString, IsNotEmpty, IsOptional, IsNumber, IsBoolean } from 'class-validator';
-import { Transform } from 'class-transformer';
+import { IsString, IsNotEmpty, IsOptional, IsNumber, IsBoolean, IsArray, ValidateNested } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
+
+export class CategoryAttributeDto {
+  @IsNumber()
+  attributeId: number;
+
+  @IsOptional()
+  @IsBoolean()
+  isRequired?: boolean = false;
+
+  @IsOptional()
+  @IsBoolean()
+  isFilterable?: boolean = true;
+
+  @IsOptional()
+  @IsNumber()
+  sortOrder?: number = 0;
+}
 
 export class CreateCategoryDto {
   @IsNotEmpty()
@@ -70,4 +87,14 @@ export class CreateCategoryDto {
 
   @IsOptional()
   images?: string[];
+
+  @IsOptional()
+  @IsArray()
+  specificationGroupIds?: (number | string)[];
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CategoryAttributeDto)
+  attributeIds?: CategoryAttributeDto[];
 }

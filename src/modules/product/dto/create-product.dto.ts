@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsOptional, IsNumber, IsBoolean, IsDate } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsNumber, IsBoolean, IsDate, IsArray } from 'class-validator';
 import { Transform } from 'class-transformer';
 
 export class CreateProductDto {
@@ -10,7 +10,7 @@ export class CreateProductDto {
   @IsString()
   slug: string;
 
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
   sku: string;
 
@@ -29,6 +29,10 @@ export class CreateProductDto {
   @IsOptional()
   @IsString()
   shortDescription?: string;
+
+  @IsOptional()
+  @IsString()
+  shortDesc?: string;
 
   @IsNotEmpty()
   @Transform(({ value }) => Number(value))
@@ -94,6 +98,9 @@ export class CreateProductDto {
 
   @IsOptional()
   mainCategoryId?: number | string;
+
+  @IsOptional()
+  categoryId?: number | string;
 
   @IsOptional()
   @Transform(({ value }) => Number(value))
@@ -163,10 +170,25 @@ export class CreateProductDto {
   images?: string[];
 
   @IsOptional()
+  gallery?: any[];
+
+  @IsOptional()
   @IsString()
   heroImage?: string;
 
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  @IsOptional()
+  @IsArray()
+  specifications?: any[];
+
+  @IsOptional()
+  @IsArray()
+  variants?: any[];
+
+  @IsOptional()
+  @IsArray()
+  tagIds?: any[];
 }

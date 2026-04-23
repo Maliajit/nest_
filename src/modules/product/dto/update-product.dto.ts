@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsNumber, IsBoolean, IsDate } from 'class-validator';
+import { IsString, IsOptional, IsNumber, IsBoolean, IsDate, IsArray } from 'class-validator';
 import { Transform } from 'class-transformer';
 
 export class UpdateProductDto {
@@ -169,4 +169,27 @@ export class UpdateProductDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  @IsOptional()
+  @IsArray()
+  specifications?: any[];
+
+  @IsOptional()
+  @IsArray()
+  variants?: any[];
+
+  @IsOptional()
+  @IsArray()
+  tagIds?: any[];
+
+  @IsOptional()
+  @IsString()
+  shortDesc?: string;
+
+  @IsOptional()
+  categoryId?: number | string;
+
+  @IsOptional()
+  @IsArray()
+  gallery?: any[];
 }

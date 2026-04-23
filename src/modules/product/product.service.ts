@@ -1,4 +1,4 @@
-import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import { Injectable, ConflictException, NotFoundException, BadRequestException, InternalServerErrorException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
@@ -12,17 +12,54 @@ export class ProductService {
     private mediaService: MediaService,
   ) {}
 
+  private safeBigInt(value: any, name: string, required = false): bigint | null {
+    if (value === null || value === undefined || value === 'null' || value === '') {
+      if (required) throw new BadRequestException(`${name} is required.`);
+      return null;
+    }
+    try {
+      return BigInt(value);
+    } catch (e) {
+      throw new BadRequestException(`Invalid ${name}: "${value}" is not a valid BigInt.`);
+    }
+  }
+
+  private handlePrismaError(error: any, context: string): never {
+    console.error(`[${context}] Error:`, error);
+    
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      switch (error.code) {
+        case 'P2002':
+          const target = (error.meta?.target as string[])?.join(', ') || 'field';
+          throw new ConflictException(`Unique constraint failed on ${target}. This ${target} is already in use.`);
+        case 'P2025':
+          throw new NotFoundException(`${context} target record not found.`);
+        case 'P2003':
+          throw new BadRequestException(`Foreign key constraint failed. One of the referenced IDs (brand, category, etc.) does not exist.`);
+        default:
+          throw new BadRequestException(`Database Error (${error.code}): ${error.message}`);
+      }
+    }
+    
+    if (error instanceof BadRequestException || error instanceof NotFoundException || error instanceof ConflictException) {
+      throw error;
+    }
+
+    throw new InternalServerErrorException(`${context} failed: ${error.message || 'Unknown internal error'}`);
+  }
+
   async createProduct(dto: CreateProductDto, imageFiles?: Array<Express.Multer.File>) {
     const { brandId, mainCategoryId, ...rest } = dto;
     
-    // Convert IDs to BigInt and decimals to string for Prisma
-    const data: any = {
-      ...rest,
-      price: rest.price ? rest.price.toString() : '0',
-      sellingPrice: rest.price ? rest.price.toString() : '0',
-      brandId: brandId ? BigInt(brandId) : null,
-      mainCategoryId: mainCategoryId ? BigInt(mainCategoryId) : null,
-    };
+    try {
+      // Convert IDs to BigInt and decimals to string for Prisma
+      const data: any = {
+        ...rest,
+        price: rest.price ? rest.price.toString() : '0',
+        sellingPrice: rest.price ? rest.price.toString() : '0',
+        brandId: this.safeBigInt(brandId, 'brandId'),
+        mainCategoryId: this.safeBigInt(mainCategoryId, 'mainCategoryId'),
+      };
 
     if (imageFiles && imageFiles.length > 0) {
       const savedMedia = await Promise.all(
@@ -40,11 +77,11 @@ export class ProductService {
     const prismaData: any = {
       name: data.name,
       slug: data.slug,
-      sku: data.sku,
+      sku: data.sku || data.productCode || `SKU-${Date.now()}`,
       productCode: data.productCode,
       productType: data.productType || 'simple',
       description: data.description,
-      shortDescription: data.shortDescription,
+      shortDescription: data.shortDescription || data.shortDesc,
       price: data.price,
       specialPrice: data.specialPrice,
       specialPriceStart: data.specialPriceStart,
@@ -66,9 +103,9 @@ export class ProductService {
       metaTitle: data.metaTitle,
       metaDescription: data.metaDescription,
       metaKeywords: data.metaKeywords,
-      images: data.images,
+      images: data.images || (dto as any).gallery?.map(g => g.url) || [],
       brandId: data.brandId,
-      mainCategoryId: data.mainCategoryId,
+      mainCategoryId: data.mainCategoryId || (dto as any).categoryId,
       subtitle: data.subtitle,
       tagline: data.tagline,
       heritageText: data.heritageText,
@@ -79,19 +116,125 @@ export class ProductService {
       mistColor: data.mistColor,
     };
 
-    try {
-      const product = await this.prisma.product.create({
-        data: prismaData,
-      });
-      return { success: true, data: product };
-    } catch (error) {
-      console.error('Error creating product:', error);
-      if (error instanceof Prisma.PrismaClientKnownRequestError) {
-        if (error.code === 'P2002') {
-          return { success: false, error: 'A product with this slug or SKU already exists.' };
+      return await this.prisma.$transaction(async (tx) => {
+        const product = await tx.product.create({
+          data: prismaData,
+        });
+
+        const productId = product.id;
+
+        // 1. Handle Tags
+        if (dto.tagIds && dto.tagIds.length > 0) {
+          const tagData = dto.tagIds
+            .map((tId: any) => ({
+              productId,
+              tagId: this.safeBigInt(tId, 'tagId'),
+            }))
+            .filter((t: any) => t.tagId !== null);
+          
+          if (tagData.length > 0) {
+            await tx.productTag.createMany({ data: tagData as any });
+          }
         }
-      }
-      return { success: false, error: error.message || 'Failed to create product' };
+
+        // 2. Handle Specifications
+        if (dto.specifications && dto.specifications.length > 0) {
+          const specData = dto.specifications
+            .map((spec: any) => ({
+              productId,
+              specificationId: this.safeBigInt(spec.specificationId, 'specificationId'),
+              value: spec.value || '',
+              specificationValueId: this.safeBigInt(spec.specificationValueId, 'specificationValueId'),
+            }))
+            .filter((s: any) => s.specificationId !== null);
+
+          if (specData.length > 0) {
+            await tx.productSpecification.createMany({ data: specData as any });
+          }
+        }
+
+        // 3. Handle Variants
+        if (dto.variants && dto.variants.length > 0) {
+          for (const variant of dto.variants) {
+            const v = await tx.productVariant.create({
+              data: {
+                productId,
+                sku: variant.sku || `VAR-${Date.now()}-${Math.random()}`,
+                price: new Prisma.Decimal(variant.price || 0),
+                sellingPrice: new Prisma.Decimal(variant.price || 0),
+                qty: Number(variant.stock || variant.qty || 0),
+                inStock: (Number(variant.stock || variant.qty || 0)) > 0,
+                isActive: true,
+              }
+            });
+
+            if (variant.attributeValues?.length > 0) {
+              await tx.variantAttribute.createMany({
+                data: variant.attributeValues.map((av: any) => ({
+                  variantId: v.id,
+                  attributeId: this.safeBigInt(av.attributeId, 'attributeId'),
+                  attributeValueId: this.safeBigInt(av.attributeValueId, 'attributeValueId'),
+                })),
+              });
+            }
+
+            // Variant Media (Unify and ensure uniqueness)
+            const mediaMap = new Map<bigint, any>();
+
+            // 1. Handle Hero Image (Priority: MAIN type)
+            if (variant.heroImageId) {
+              const mid = this.safeBigInt(variant.heroImageId, 'heroImageId', true);
+              if (mid) {
+                mediaMap.set(mid, {
+                  variantId: v.id,
+                  mediaId: mid,
+                  type: 'MAIN',
+                  sortOrder: 0
+                });
+              }
+            }
+
+            // 2. Handle Gallery IDs
+            if (variant.galleryIds && Array.isArray(variant.galleryIds)) {
+              variant.galleryIds.forEach((mid: any) => {
+                const id = this.safeBigInt(mid, 'mediaId', true);
+                if (id && !mediaMap.has(id)) {
+                  mediaMap.set(id, {
+                    variantId: v.id,
+                    mediaId: id,
+                    type: 'GALLERY',
+                    sortOrder: mediaMap.size
+                  });
+                }
+              });
+            }
+
+            // 3. Handle Gallery objects (new format)
+            if (variant.gallery && Array.isArray(variant.gallery)) {
+              variant.gallery.forEach((img: any) => {
+                const id = this.safeBigInt(img.id || img.mediaId, 'mediaId', true);
+                if (id && !mediaMap.has(id)) {
+                  mediaMap.set(id, {
+                    variantId: v.id,
+                    mediaId: id,
+                    type: 'GALLERY',
+                    sortOrder: mediaMap.size
+                  });
+                }
+              });
+            }
+
+            const variantMedia = Array.from(mediaMap.values());
+            if (variantMedia.length > 0) {
+              await tx.variantImage.createMany({ data: variantMedia });
+            }
+          }
+        }
+
+        return product;
+      });
+    } catch (error) {
+      this.handlePrismaError(error, 'Create Product');
     }
   }
 
@@ -299,48 +442,216 @@ export class ProductService {
   }
 
   async updateProduct(id: string | number, dto: UpdateProductDto, imageFiles?: Array<Express.Multer.File>) {
-    const { brandId, mainCategoryId, isActive, ...rest } = dto as any;
-    
-    const data: any = { ...rest };
-
-    if (isActive !== undefined) {
-      data.status = isActive ? 'active' : 'inactive';
-    }
-
-    if (rest.price !== undefined) {
-      data.price = rest.price.toString();
-    }
-    if (rest.specialPrice !== undefined) {
-      data.specialPrice = rest.specialPrice ? rest.specialPrice.toString() : null;
-    }
-    if (brandId !== undefined) {
-      data.brandId = brandId ? BigInt(brandId) : null;
-    }
-    if (mainCategoryId !== undefined) {
-      data.mainCategoryId = mainCategoryId ? BigInt(mainCategoryId) : null;
-    }
-
-    if (imageFiles && imageFiles.length > 0) {
-      const savedMedia = await Promise.all(
-        imageFiles.map(file => this.mediaService.saveUploadedFile(file))
-      );
-      const newImages = savedMedia.map(m => `/uploads/${m.data.fileName}`);
-      data.images = newImages; 
-    }
-
     try {
-      const product = await this.prisma.product.update({
-        where: { id: BigInt(id) },
-        data,
-      });
-      return { success: true, data: product };
-    } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError) {
-        if (error.code === 'P2025') {
-          throw new NotFoundException(`Product with ID ${id} not found.`);
-        }
+      const productId = this.safeBigInt(id, 'productId', true) as bigint;
+      const { 
+        brandId, 
+        mainCategoryId, 
+        isActive, 
+        categoryId,
+        shortDesc,
+        specifications, 
+        tagIds, 
+        variants,
+        gallery,
+        ...rest 
+      } = dto as any;
+
+      const prismaData: any = { ...rest };
+
+      if (isActive !== undefined) {
+        prismaData.status = isActive ? 'active' : 'inactive';
       }
-      throw error;
+
+      if (rest.price !== undefined) prismaData.price = rest.price.toString();
+      if (rest.specialPrice !== undefined) prismaData.specialPrice = rest.specialPrice ? rest.specialPrice.toString() : null;
+      
+      if (brandId !== undefined) prismaData.brandId = this.safeBigInt(brandId, 'brandId');
+      if (mainCategoryId !== undefined || categoryId !== undefined) {
+        const catId = mainCategoryId || categoryId;
+        prismaData.mainCategoryId = this.safeBigInt(catId, 'mainCategoryId');
+      }
+
+      if (shortDesc && !rest.shortDescription) {
+        prismaData.shortDescription = shortDesc;
+      }
+
+      if (imageFiles && imageFiles.length > 0) {
+        const savedMedia = await Promise.all(
+          imageFiles.map(file => this.mediaService.saveUploadedFile(file))
+        );
+        prismaData.images = savedMedia.map(m => `/uploads/${m.data.fileName}`);
+      } else if (gallery) {
+        prismaData.images = gallery.map((g: any) => typeof g === 'string' ? g : g.url);
+      }
+
+      const validFields = [
+        'name', 'slug', 'sku', 'productCode', 'productType', 'description', 'shortDescription',
+        'price', 'sellingPrice', 'specialPrice', 'specialPriceStart', 'specialPriceEnd',
+        'manageStock', 'qty', 'inStock', 'codAvailable', 'status', 'heroImage',
+        'isFeatured', 'isNew', 'isBestseller', 'weight', 'length', 'width', 'height',
+        'metaTitle', 'metaDescription', 'metaKeywords', 'brandId', 'mainCategoryId',
+        'subtitle', 'tagline', 'heritageText', 'bgColor', 'accentColor', 'textColor', 
+        'gradient', 'mistColor', 'images'
+      ];
+
+      const filteredPrismaData: any = {};
+      validFields.forEach(field => {
+        if (prismaData[field] !== undefined) filteredPrismaData[field] = prismaData[field];
+      });
+
+      return await this.prisma.$transaction(async (tx) => {
+        // 1. Update Basic Info
+        const product = await tx.product.update({
+          where: { id: productId },
+          data: filteredPrismaData,
+        });
+
+        // 2. Update Specifications
+        if (specifications !== undefined) {
+          await tx.productSpecification.deleteMany({ where: { productId } });
+          if (specifications.length > 0) {
+            const specData = specifications
+              .map((spec: any) => ({
+                productId,
+                specificationId: this.safeBigInt(spec.specificationId, 'specificationId'),
+                value: spec.value || '',
+                specificationValueId: this.safeBigInt(spec.specificationValueId, 'specificationValueId'),
+              }))
+              .filter((s: any) => s.specificationId !== null);
+
+            if (specData.length > 0) {
+              await tx.productSpecification.createMany({ data: specData as any });
+            }
+          }
+        }
+
+        // 3. Update Tags
+        if (tagIds !== undefined) {
+          await tx.productTag.deleteMany({ where: { productId } });
+          if (tagIds.length > 0) {
+            const tagData = tagIds
+              .map((tagId: any) => ({
+                productId,
+                tagId: this.safeBigInt(tagId, 'tagId'),
+              }))
+              .filter((t: any) => t.tagId !== null);
+
+            if (tagData.length > 0) {
+              await tx.productTag.createMany({ data: tagData as any });
+            }
+          }
+        }
+
+        // 4. Update Variants
+        if (variants !== undefined) {
+          const currentVariants = await tx.productVariant.findMany({ 
+            where: { productId },
+            select: { id: true }
+          });
+          const currentIds = currentVariants.map(v => v.id);
+          const incomingIds = variants
+            .filter((v: any) => v.id && !v.id.toString().includes('.'))
+            .map((v: any) => this.safeBigInt(v.id, 'variantId'))
+            .filter(Boolean);
+
+          const toDelete = currentIds.filter(id => !incomingIds.includes(id));
+          if (toDelete.length > 0) {
+            await tx.productVariant.deleteMany({ where: { id: { in: toDelete } } });
+          }
+
+          for (const variant of variants) {
+            const isNew = !variant.id || variant.id.toString().includes('.');
+            const variantData: any = {
+              sku: variant.sku || `VAR-${Date.now()}-${Math.random()}`,
+              price: new Prisma.Decimal(variant.price || 0),
+              sellingPrice: new Prisma.Decimal(variant.price || 0),
+              qty: Number(variant.stock) || 0,
+              inStock: (Number(variant.stock) || 0) > 0,
+              isActive: true,
+            };
+
+            let v;
+            if (isNew) {
+              v = await tx.productVariant.create({
+                data: { ...variantData, productId: productId as bigint }
+              });
+            } else {
+              v = await tx.productVariant.update({
+                where: { id: this.safeBigInt(variant.id, 'variantId', true) as bigint },
+                data: variantData
+              });
+              await tx.variantAttribute.deleteMany({ where: { variantId: v.id } });
+              await tx.variantImage.deleteMany({ where: { variantId: v.id } });
+            }
+
+            if (variant.attributeValues?.length > 0) {
+              await tx.variantAttribute.createMany({
+                data: variant.attributeValues.map((av: any) => ({
+                  variantId: v.id,
+                  attributeId: this.safeBigInt(av.attributeId, 'attributeId'),
+                  attributeValueId: this.safeBigInt(av.attributeValueId, 'attributeValueId'),
+                })),
+              });
+            }
+
+            // Sync Images (Unify and ensure uniqueness)
+            const mediaMap = new Map<bigint, any>();
+
+            // 1. Handle Hero Image (Priority: MAIN type)
+            if (variant.heroImageId) {
+              const mid = this.safeBigInt(variant.heroImageId, 'heroImageId', true);
+              if (mid) {
+                mediaMap.set(mid, {
+                  variantId: v.id,
+                  mediaId: mid,
+                  type: 'MAIN',
+                  sortOrder: 0
+                });
+              }
+            }
+
+            // 2. Handle Gallery IDs
+            if (variant.galleryIds && Array.isArray(variant.galleryIds)) {
+              variant.galleryIds.forEach((mid: any) => {
+                const id = this.safeBigInt(mid, 'mediaId', true);
+                if (id && !mediaMap.has(id)) {
+                  mediaMap.set(id, {
+                    variantId: v.id,
+                    mediaId: id,
+                    type: 'GALLERY',
+                    sortOrder: mediaMap.size
+                  });
+                }
+              });
+            }
+
+            // 3. Handle Gallery objects (new format)
+            if (variant.gallery && Array.isArray(variant.gallery)) {
+              variant.gallery.forEach((img: any) => {
+                const id = this.safeBigInt(img.id || img.mediaId, 'mediaId', true);
+                if (id && !mediaMap.has(id)) {
+                  mediaMap.set(id, {
+                    variantId: v.id,
+                    mediaId: id,
+                    type: 'GALLERY',
+                    sortOrder: mediaMap.size
+                  });
+                }
+              });
+            }
+
+            const variantMedia = Array.from(mediaMap.values());
+            if (variantMedia.length > 0) {
+              await tx.variantImage.createMany({ data: variantMedia });
+            }
+          }
+        }
+
+        return product;
+      });
+    } catch (error) {
+      this.handlePrismaError(error, 'Update Product');
     }
   }
 

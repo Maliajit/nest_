@@ -8,16 +8,65 @@ import { Prisma } from '@prisma/client';
 export class CategoryService {
   constructor(private prisma: PrismaService) {}
 
+  private toBigInt(value: any): bigint | null {
+    if (value === null || value === undefined || String(value).trim() === '') return null;
+    try {
+      return BigInt(value);
+    } catch (e) {
+      return null;
+    }
+  }
+
   async createCategory(dto: CreateCategoryDto) {
-    const { parentId, imageId, image, imageUrl, isActive, ...rest } = dto as any;
+    const { 
+        specificationGroupIds, 
+        attributeIds,
+        parentId,
+        imageId,
+        isActive,
+        imageUrl,
+        image,
+        ...rest 
+    } = dto as any;
     
+    // Explicitly pick only model fields to avoid "Unknown field" errors
     const data: any = {
-      ...rest,
-      parentId: parentId ? BigInt(parentId) : null,
-      imageId: imageId ? BigInt(imageId) : null,
+      name: dto.name,
+      slug: dto.slug,
+      description: dto.description || null,
+      status: dto.status !== undefined ? Number(dto.status) : (isActive === false ? 0 : 1),
+      featured: dto.featured !== undefined ? Number(dto.featured) : 0,
+      showInNav: dto.showInNav !== undefined ? Number(dto.showInNav) : 1,
+      sortOrder: dto.sortOrder !== undefined ? Number(dto.sortOrder) : 0,
+      metaTitle: dto.metaTitle || null,
+      metaDescription: dto.metaDescription || null,
+      metaKeywords: dto.metaKeywords || null,
       imageUrl: imageUrl || image || null,
-      status: dto.status ?? (isActive === false ? 0 : 1),
+      parentId: this.toBigInt(parentId),
+      imageId: this.toBigInt(imageId),
     };
+
+    if (specificationGroupIds?.length) {
+      data.specGroups = {
+        create: specificationGroupIds
+            .map(id => this.toBigInt(id))
+            .filter(id => id !== null)
+            .map(groupId => ({
+                specificationGroupId: groupId
+            }))
+      };
+    }
+
+    if (attributeIds?.length) {
+      data.attributes = {
+        create: attributeIds.map(attr => ({
+          attributeId: this.toBigInt(attr.attributeId),
+          isRequired: attr.isRequired ? 1 : 0,
+          isFilterable: attr.isFilterable ? 1 : 0,
+          sortOrder: Number(attr.sortOrder) || 0
+        })).filter(a => a.attributeId !== null)
+      };
+    }
 
     try {
       const category = await this.prisma.category.create({
@@ -59,6 +108,32 @@ export class CategoryService {
       where: { slug },
       include: {
         image: true,
+        specGroups: {
+          include: {
+            specGroup: {
+              include: {
+                specifications: {
+                  include: {
+                    specification: {
+                      include: {
+                        values: true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        attributes: {
+          include: {
+            attribute: {
+              include: {
+                values: true
+              }
+            }
+          }
+        },
         _count: {
           select: { products: true }
         }
@@ -102,14 +177,42 @@ export class CategoryService {
       where: { id: BigInt(id) },
       include: {
         image: true,
+        specGroups: {
+          include: {
+            specGroup: {
+              include: {
+                specifications: {
+                  include: {
+                    specification: {
+                      include: {
+                        values: true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        attributes: {
+          include: {
+            attribute: {
+              include: {
+                values: true
+              }
+            }
+          }
+        },
         _count: {
           select: { products: true }
         }
       }
     });
+    
     if (!category) {
       throw new NotFoundException(`Category with ID ${id} not found.`);
     }
+
     return {
       ...category,
       isActive: category.status === 1,
@@ -117,21 +220,68 @@ export class CategoryService {
   }
 
   async updateCategory(id: string | number, dto: UpdateCategoryDto) {
-    const { parentId, imageId, image, imageUrl, isActive, ...rest } = dto as any;
+    const { 
+        specificationGroupIds, 
+        attributeIds,
+        parentId,
+        imageId,
+        isActive,
+        imageUrl,
+        image,
+        ...rest 
+    } = dto as any;
     
-    const data: any = { ...rest };
-
-    if (parentId !== undefined) {
-      data.parentId = parentId ? BigInt(parentId) : null;
-    }
-    if (imageId !== undefined) {
-      data.imageId = imageId ? BigInt(imageId) : null;
-    }
+    const data: any = {};
+    
+    if (dto.name !== undefined) data.name = dto.name;
+    if (dto.slug !== undefined) data.slug = dto.slug;
+    if (dto.description !== undefined) data.description = dto.description || null;
+    if (dto.status !== undefined) data.status = Number(dto.status);
+    else if (isActive !== undefined) data.status = isActive ? 1 : 0;
+    
+    if (dto.featured !== undefined) data.featured = Number(dto.featured);
+    if (dto.showInNav !== undefined) data.showInNav = Number(dto.showInNav);
+    if (dto.sortOrder !== undefined) data.sortOrder = Number(dto.sortOrder);
+    
+    if (dto.metaTitle !== undefined) data.metaTitle = dto.metaTitle || null;
+    if (dto.metaDescription !== undefined) data.metaDescription = dto.metaDescription || null;
+    if (dto.metaKeywords !== undefined) data.metaKeywords = dto.metaKeywords || null;
+    
     if (imageUrl !== undefined || image !== undefined) {
       data.imageUrl = imageUrl || image || null;
     }
-    if (isActive !== undefined) {
-      data.status = isActive ? 1 : 0;
+
+    if (parentId !== undefined) {
+      data.parentId = this.toBigInt(parentId);
+    }
+    if (imageId !== undefined) {
+      data.imageId = this.toBigInt(imageId);
+    }
+
+    // Refresh Spec Groups
+    if (specificationGroupIds !== undefined) {
+        data.specGroups = {
+            deleteMany: {},
+            create: (specificationGroupIds || [])
+                .map(id => this.toBigInt(id))
+                .filter(id => id !== null)
+                .map(groupId => ({
+                    specificationGroupId: groupId
+                }))
+        };
+    }
+
+    // Refresh Attributes
+    if (attributeIds !== undefined) {
+        data.attributes = {
+            deleteMany: {},
+            create: (attributeIds || []).map(attr => ({
+                attributeId: this.toBigInt(attr.attributeId),
+                isRequired: attr.isRequired ? 1 : 0,
+                isFilterable: attr.isFilterable ? 1 : 0,
+                sortOrder: Number(attr.sortOrder) || 0
+            })).filter(a => a.attributeId !== null)
+        };
     }
 
     try {

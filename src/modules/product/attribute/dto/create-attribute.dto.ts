@@ -14,6 +14,13 @@ export class CreateAttributeValueDto {
   @IsOptional()
   colorCode?: string;
 
+  @IsString()
+  @IsOptional()
+  status?: string = 'active';
+
+  @IsOptional()
+  sortOrder?: number = 0;
+
   @IsOptional()
   imageId?: string | number;
 }
@@ -42,6 +49,9 @@ export class CreateAttributeDto {
   @IsString()
   @IsOptional()
   status?: string = 'active';
+
+  @IsOptional()
+  sortOrder?: number = 0;
 
   @IsBoolean()
   @IsOptional()
