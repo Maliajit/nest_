@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
@@ -6,9 +6,9 @@ export class WishlistService {
   constructor(private prisma: PrismaService) {}
 
   // Get or Create wishlist for customer
-  private async getOrCreateWishlist(customerId: string) {
-    if (!customerId || customerId === 'undefined' || customerId === 'null') {
-      return { id: BigInt(0), items: [], name: 'Default' };
+  private async getOrCreateWishlist(customerId: string | number | bigint) {
+    if (customerId === undefined || customerId === null || customerId === 'undefined' || customerId === 'null' || customerId === '') {
+      return { id: BigInt(0), items: [] as any[], name: 'Default' };
     }
     const cId = BigInt(customerId);
     // Unique on customerId and name
@@ -36,6 +36,9 @@ export class WishlistService {
 
   // Toggle item in wishlist
   async toggleItem(customerId: string, variantId: string) {
+    if (!variantId || variantId === 'toggle' || variantId === 'undefined') {
+        throw new BadRequestException(`Invalid variantId: ${variantId}`);
+    }
     const vId = BigInt(variantId);
     const wishlist = await this.getOrCreateWishlist(customerId);
 

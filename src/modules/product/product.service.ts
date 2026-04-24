@@ -318,6 +318,15 @@ export class ProductService {
           taxClass: true,
           variants: {
             include: {
+              variantAttributes: {
+                include: {
+                  attributeValue: {
+                    include: {
+                      attribute: true
+                    }
+                  }
+                }
+              },
               variantImages: {
                 include: {
                   media: true
@@ -382,7 +391,11 @@ export class ProductService {
           include: {
             variantAttributes: {
               include: {
-                attributeValue: true
+                attributeValue: {
+                  include: {
+                    attribute: true
+                  }
+                }
               }
             },
             variantImages: {

@@ -167,6 +167,10 @@ export class CreateProductDto {
   mistColor?: string;
 
   @IsOptional()
+  @IsString()
+  videoUrl?: string;
+
+  @IsOptional()
   images?: string[];
 
   @IsOptional()

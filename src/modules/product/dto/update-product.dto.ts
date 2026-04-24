@@ -160,6 +160,10 @@ export class UpdateProductDto {
   mistColor?: string;
 
   @IsOptional()
+  @IsString()
+  videoUrl?: string;
+
+  @IsOptional()
   images?: string[];
 
   @IsOptional()

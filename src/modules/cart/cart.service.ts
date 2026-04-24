@@ -14,7 +14,7 @@ export class CartService {
   // Get or Create active cart for customer
   private async getOrCreateCart(customerId: string) {
     if (!customerId || customerId === 'undefined' || customerId === 'null') {
-      return { id: BigInt(0), items: [], subtotal: 0, discountTotal: 0, grandTotal: 0 };
+      return { id: BigInt(0), items: [] as any[], subtotal: new Prisma.Decimal(0), discountTotal: new Prisma.Decimal(0), grandTotal: new Prisma.Decimal(0) };
     }
     const cId = BigInt(customerId);
     let cart = await this.prisma.cart.findFirst({
@@ -60,6 +60,7 @@ export class CartService {
 
   // Add item to cart
   async addItem(customerId: string, dto: AddToCartDto) {
+    if (!dto.variantId) throw new BadRequestException('variantId is required');
     const cart = await this.getOrCreateCart(customerId);
     const variantId = BigInt(dto.variantId);
 
@@ -72,7 +73,7 @@ export class CartService {
     }
 
     // Check if item already in cart
-    const existingItem = cart.items.find((item) => item.productVariantId === variantId);
+    const existingItem = (cart.items as any[]).find((item) => item.productVariantId === variantId);
 
     if (existingItem) {
       return this.updateItem(customerId, existingItem.id.toString(), {
