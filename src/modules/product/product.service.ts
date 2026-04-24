@@ -116,6 +116,7 @@ export class ProductService {
       textColor: data.textColor,
       gradient: data.gradient,
       mistColor: data.mistColor,
+      videoUrl: data.videoUrl,
     };
 
       return await this.prisma.$transaction(async (tx) => {
@@ -505,7 +506,7 @@ export class ProductService {
         'manageStock', 'qty', 'inStock', 'codAvailable', 'status', 'heroImage',
         'isFeatured', 'isNew', 'isBestseller', 'weight', 'length', 'width', 'height',
         'metaTitle', 'metaDescription', 'metaKeywords', 'brandId', 'mainCategoryId', 'taxClassId',
-        'subtitle', 'tagline', 'heritageText', 'bgColor', 'accentColor', 'textColor', 
+        'subtitle', 'tagline', 'heritageText', 'videoUrl', 'bgColor', 'accentColor', 'textColor', 
         'gradient', 'mistColor', 'images'
       ];
 

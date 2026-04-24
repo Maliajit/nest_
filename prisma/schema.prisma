@@ -645,6 +645,7 @@ model Product {
   tagline             String?
   heroImage           String?                @map("hero_image")
   heritageText        String?                @map("heritage_text")
+  videoUrl            String?                @map("video_url")
   
   // Theme Fields
   bgColor             String?                @map("bg_color")
