@@ -315,7 +315,15 @@ export class ProductService {
           brand: true,
           mainCategory: true,
           taxClass: true,
-          variants: true,
+          variants: {
+            include: {
+              variantImages: {
+                include: {
+                  media: true
+                }
+              }
+            }
+          },
           _count: {
             select: { 
               variants: true,
