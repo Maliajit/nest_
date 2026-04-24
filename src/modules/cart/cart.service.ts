@@ -13,6 +13,9 @@ export class CartService {
 
   // Get or Create active cart for customer
   private async getOrCreateCart(customerId: string) {
+    if (!customerId || customerId === 'undefined' || customerId === 'null') {
+      return { id: BigInt(0), items: [], subtotal: 0, discountTotal: 0, grandTotal: 0 };
+    }
     const cId = BigInt(customerId);
     let cart = await this.prisma.cart.findFirst({
       where: { customerId: cId, status: 'active' },

@@ -6,6 +6,7 @@ import {
   Patch,
   Param,
   Delete,
+  Query,
 } from '@nestjs/common';
 import { CartService } from './cart.service';
 import { AddToCartDto, UpdateCartItemDto } from './dto/cart.dto';
@@ -15,7 +16,8 @@ export class CartController {
   constructor(private readonly cartService: CartService) {}
 
   @Get()
-  async getCart(@Body('userId') userId: string) {
+  async getCart(@Body('userId') bodyUserId: string, @Query('userId') queryUserId: string) {
+    const userId = bodyUserId || queryUserId;
     return this.cartService.getCart(userId);
   }
 

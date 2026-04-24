@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Delete, Param, Body } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Param, Body, Query } from '@nestjs/common';
 import { WishlistService } from './wishlist.service';
 
 @Controller('wishlist')
@@ -6,7 +6,8 @@ export class WishlistController {
   constructor(private readonly wishlistService: WishlistService) {}
 
   @Get()
-  async getWishlist(@Body('customerId') customerId: string) {
+  async getWishlist(@Body('customerId') bodyId: string, @Query('customerId') queryId: string) {
+    const customerId = bodyId || queryId;
     return this.wishlistService.getWishlist(customerId);
   }
 

@@ -7,6 +7,9 @@ export class WishlistService {
 
   // Get or Create wishlist for customer
   private async getOrCreateWishlist(customerId: string) {
+    if (!customerId || customerId === 'undefined' || customerId === 'null') {
+      return { id: BigInt(0), items: [], name: 'Default' };
+    }
     const cId = BigInt(customerId);
     // Unique on customerId and name
     let wishlist = await this.prisma.wishlist.findUnique({
