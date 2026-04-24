@@ -7,24 +7,40 @@ export class WishlistService {
 
   // Get or Create wishlist for customer
   private async getOrCreateWishlist(customerId: string | number | bigint) {
-    if (customerId === undefined || customerId === null || customerId === 'undefined' || customerId === 'null' || customerId === '') {
+    if (!customerId || customerId === 'undefined' || customerId === 'null' || customerId === '') {
       return { id: BigInt(0), items: [] as any[], name: 'Default' };
     }
-    const cId = BigInt(customerId);
-    // Unique on customerId and name
-    let wishlist = await this.prisma.wishlist.findUnique({
-      where: { customerId_name: { customerId: cId, name: 'Default' } },
+
+    const customerIdStr = customerId.toString();
+    const isNumeric = !isNaN(Number(customerIdStr)) && !customerIdStr.includes('usr_');
+
+    let wishlist = await this.prisma.wishlist.findFirst({
+      where: isNumeric 
+        ? { customerId: BigInt(customerIdStr) }
+        : { sessionId: customerIdStr },
       include: { items: { include: { productVariant: { include: { product: true } } } } },
     });
 
     if (!wishlist) {
-      wishlist = await this.prisma.wishlist.create({
-        data: {
-          customer: { connect: { id: cId } },
-          name: 'Default',
-        },
-        include: { items: { include: { productVariant: { include: { product: true } } } } },
-      });
+      try {
+        if (isNumeric) {
+          wishlist = await this.prisma.wishlist.create({
+            data: { customerId: BigInt(customerIdStr), name: 'Default' },
+            include: { items: { include: { productVariant: { include: { product: true } } } } },
+          });
+        } else {
+          wishlist = await this.prisma.wishlist.create({
+            data: { sessionId: customerIdStr, name: 'Default' },
+            include: { items: { include: { productVariant: { include: { product: true } } } } },
+          });
+        }
+      } catch (err) {
+        // Fallback for non-existent numeric users
+        wishlist = await this.prisma.wishlist.create({
+          data: { sessionId: customerIdStr, name: 'Default' },
+          include: { items: { include: { productVariant: { include: { product: true } } } } },
+        });
+      }
     }
     return wishlist;
   }

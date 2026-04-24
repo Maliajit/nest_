@@ -12,24 +12,50 @@ export class CartService {
   ) {}
 
   // Get or Create active cart for customer
-  private async getOrCreateCart(customerId: string) {
-    if (!customerId || customerId === 'undefined' || customerId === 'null') {
+  private async getOrCreateCart(customerId: string | number | bigint) {
+    if (!customerId || customerId === 'undefined' || customerId === 'null' || customerId === '') {
       return { id: BigInt(0), items: [] as any[], subtotal: new Prisma.Decimal(0), discountTotal: new Prisma.Decimal(0), grandTotal: new Prisma.Decimal(0) };
     }
-    const cId = BigInt(customerId);
+
+    const customerIdStr = customerId.toString();
+    const isNumeric = !isNaN(Number(customerIdStr)) && !customerIdStr.includes('usr_');
+    
     let cart = await this.prisma.cart.findFirst({
-      where: { customerId: cId, status: 'active' },
+      where: isNumeric 
+        ? { customerId: BigInt(customerIdStr), status: 'active' }
+        : { sessionId: customerIdStr, status: 'active' },
       include: { items: { include: { productVariant: { include: { product: true } } } } },
     });
 
     if (!cart) {
-      cart = await this.prisma.cart.create({
-        data: {
-          customer: { connect: { id: cId } },
-          status: 'active',
-        },
-        include: { items: { include: { productVariant: { include: { product: true } } } } },
-      });
+      try {
+        if (isNumeric) {
+          cart = await this.prisma.cart.create({
+            data: {
+              customer: { connect: { id: BigInt(customerIdStr) } },
+              status: 'active',
+            },
+            include: { items: { include: { productVariant: { include: { product: true } } } } },
+          });
+        } else {
+          cart = await this.prisma.cart.create({
+            data: {
+              sessionId: customerIdStr,
+              status: 'active',
+            },
+            include: { items: { include: { productVariant: { include: { product: true } } } } },
+          });
+        }
+      } catch (err) {
+        // Fallback for non-existent numeric users: treat as session
+        cart = await this.prisma.cart.create({
+          data: {
+            sessionId: customerIdStr,
+            status: 'active',
+          },
+          include: { items: { include: { productVariant: { include: { product: true } } } } },
+        });
+      }
     }
     return cart;
   }
@@ -60,40 +86,74 @@ export class CartService {
 
   // Add item to cart
   async addItem(customerId: string, dto: AddToCartDto) {
-    if (!dto.variantId) throw new BadRequestException('variantId is required');
-    const cart = await this.getOrCreateCart(customerId);
-    const variantId = BigInt(dto.variantId);
+    try {
+      if (!dto.variantId && !dto.productId) throw new BadRequestException('variantId or productId is required');
+      const cart = await this.getOrCreateCart(customerId);
+      
+      let variantId: bigint;
 
-    // Validate variant exists
-    const variant = await this.prisma.productVariant.findUnique({
-      where: { id: variantId },
-    });
-    if (!variant) {
-      throw new NotFoundException('Product variant not found');
-    }
+      if (dto.variantId) {
+        variantId = BigInt(dto.variantId);
+      } else {
+        // Find or create default variant for simple product
+        const pId = BigInt(dto.productId!);
+        const product = await this.prisma.product.findUnique({
+          where: { id: pId },
+          include: { variants: true }
+        });
+        if (!product) throw new NotFoundException('Product not found');
+        
+        if (product.variants.length > 0) {
+          variantId = product.variants[0].id;
+        } else {
+          // Create a default variant if missing
+          const newVariant = await this.prisma.productVariant.create({
+            data: {
+              productId: pId,
+              sku: `DEF-${product.slug}-${Date.now()}`,
+              price: product.price || new Prisma.Decimal(0),
+              qty: 99,
+            }
+          });
+          variantId = newVariant.id;
+        }
+      }
 
-    // Check if item already in cart
-    const existingItem = (cart.items as any[]).find((item) => item.productVariantId === variantId);
-
-    if (existingItem) {
-      return this.updateItem(customerId, existingItem.id.toString(), {
-        quantity: existingItem.quantity + dto.quantity,
+      // Validate variant exists
+      const variant = await this.prisma.productVariant.findUnique({
+        where: { id: variantId },
       });
+      if (!variant) {
+        throw new NotFoundException('Product variant not found');
+      }
+
+      // Check if item already in cart
+      const existingItem = (cart.items as any[]).find((item) => item.productVariantId === variantId);
+
+      if (existingItem) {
+        return this.updateItem(customerId, existingItem.id.toString(), {
+          userId: customerId,
+          quantity: existingItem.quantity + dto.quantity,
+        });
+      }
+
+      // Create new item
+      const newItem = await this.prisma.cartItem.create({
+        data: {
+          cart: { connect: { id: cart.id } },
+          productVariant: { connect: { id: variantId } },
+          quantity: dto.quantity,
+          unitPrice: variant.price || new Prisma.Decimal(0),
+          total: new Prisma.Decimal((variant.price?.toNumber() || 0) * dto.quantity),
+        },
+      });
+
+      await this.updateCartTotals(cart.id);
+      return newItem;
+    } catch (err) {
+      console.error('CRITICAL ERROR in addItem:', err);
+      throw err;
     }
-
-    // Create new item
-    const newItem = await this.prisma.cartItem.create({
-      data: {
-        cart: { connect: { id: cart.id } },
-        productVariant: { connect: { id: variantId } },
-        quantity: dto.quantity,
-        unitPrice: variant.price,
-        total: new Prisma.Decimal(variant.price.toNumber() * dto.quantity),
-      },
-    });
-
-    await this.updateCartTotals(cart.id);
-    return newItem;
   }
 
   // Update item quantity
@@ -105,7 +165,14 @@ export class CartService {
       include: { cart: true },
     });
 
-    if (!item || item.cart.customerId !== BigInt(customerId)) {
+    const customerIdStr = customerId.toString();
+    const isNumeric = !isNaN(Number(customerIdStr)) && !customerIdStr.includes('usr_') && customerIdStr !== '';
+    
+    const ownerMatch = isNumeric 
+      ? (item && item.cart.customerId === BigInt(customerIdStr))
+      : (item && item.cart.sessionId === customerIdStr);
+
+    if (!item || !ownerMatch) {
       throw new NotFoundException('Cart item not found');
     }
 
@@ -113,7 +180,7 @@ export class CartService {
       where: { id: iId },
       data: {
         quantity: dto.quantity,
-        total: new Prisma.Decimal(item.unitPrice.toNumber() * dto.quantity),
+        total: new Prisma.Decimal((item.unitPrice?.toNumber() || 0) * dto.quantity),
       },
     });
 
@@ -129,7 +196,14 @@ export class CartService {
       include: { cart: true },
     });
 
-    if (!item || item.cart.customerId !== BigInt(customerId)) {
+    const customerIdStr = customerId.toString();
+    const isNumeric = !isNaN(Number(customerIdStr)) && !customerIdStr.includes('usr_') && customerIdStr !== '';
+    
+    const ownerMatch = isNumeric 
+      ? (item && item.cart.customerId === BigInt(customerIdStr))
+      : (item && item.cart.sessionId === customerIdStr);
+
+    if (!item || !ownerMatch) {
       throw new NotFoundException('Cart item not found');
     }
 
@@ -164,7 +238,7 @@ export class CartService {
 
     if (!cart) return;
 
-    const subtotal = cart.items.reduce((sum, item) => sum + item.total.toNumber(), 0);
+    const subtotal = cart.items.reduce((sum, item) => sum + (item.total?.toNumber() || 0), 0);
     let discount = 0;
 
     if (cart.offerId && cart.offer) {
