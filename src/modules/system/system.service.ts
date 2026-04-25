@@ -134,11 +134,45 @@ export class SystemService {
       orderStatusDistribution[g.status] = g._count.id;
     });
 
-    // Mock weekly revenue for now to populate chart
+    // Real weekly revenue for chart
+    const last7Days = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      d.setHours(0, 0, 0, 0);
+      return d;
+    }).reverse();
+
+    const revenueChartDataRaw = await Promise.all(last7Days.map(async (day) => {
+      const nextDay = new Date(day);
+      nextDay.setDate(day.getDate() + 1);
+      const res = await this.prisma.order.aggregate({
+        where: {
+          createdAt: { gte: day, lt: nextDay },
+          paymentStatus: 'paid'
+        },
+        _sum: { grandTotal: true }
+      });
+      return Number(res._sum?.grandTotal || 0);
+    }));
+
     const revenueChartData = {
-      labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-      data: [35000, 42000, 38500, 51000, 48000, 32000, 45000] // In a real app, query by day
+      labels: last7Days.map(d => d.toLocaleDateString('en-US', { weekday: 'short' })),
+      data: revenueChartDataRaw
     };
+
+    // Real sales by payment method
+    const salesByPaymentRaw = await this.prisma.order.groupBy({
+      by: ['paymentMethod'],
+      _sum: { grandTotal: true },
+      _count: { id: true },
+      where: { paymentStatus: 'paid' }
+    });
+
+    const salesByPaymentMethod = salesByPaymentRaw.map(s => ({
+      name: s.paymentMethod?.toUpperCase() || 'Unknown',
+      total_amount: Number(s._sum.grandTotal || 0),
+      order_count: s._count.id
+    }));
 
     return {
       success: true,
@@ -146,25 +180,22 @@ export class SystemService {
         stats,
         recentOrders: recentOrders.map(o => ({
           id: o.id.toString(),
-          order_number: o.orderNumber,
+          orderNumber: o.orderNumber,
           customer: o.customer?.name || 'Guest',
           amount: Number(o.grandTotal),
           status: o.status,
-          date: o.createdAt?.toLocaleDateString() || 'N/A'
+          createdAt: o.createdAt
         })),
         recentCustomers: recentCustomers.map(c => ({
           id: c.id.toString(),
           name: c.name,
           email: c.email,
-          joined: c.createdAt?.toLocaleDateString() || 'N/A'
+          createdAt: c.createdAt
         })),
         topProducts: validTopProducts,
         orderStatusDistribution,
         revenueChartData,
-        salesByPaymentMethod: [
-          { name: 'UPI', total_amount: 125000, order_count: 45 },
-          { name: 'COD', total_amount: 85000, order_count: 32 }
-        ]
+        salesByPaymentMethod
       }
     };
   }

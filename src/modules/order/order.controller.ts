@@ -11,7 +11,10 @@ export class OrderController {
   }
 
   @Get()
-  async getAllOrders() {
+  async getAllOrders(@Query('customerId') customerId?: string) {
+    if (customerId) {
+      return this.orderService.getOrders(customerId);
+    }
     return this.orderService.getAllOrders();
   }
 

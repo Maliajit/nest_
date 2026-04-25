@@ -210,7 +210,17 @@ export class OrderService {
         },
       });
 
-      return order;
+      return tx.order.findUnique({
+        where: { id: order.id },
+        include: { 
+          items: {
+            include: {
+              product: true,
+              productVariant: true
+            }
+          }
+        }
+      });
     });
   }
 
@@ -300,7 +310,11 @@ export class OrderService {
     const orders = await this.prisma.order.findMany({
       orderBy: { createdAt: 'desc' },
       include: { 
-        items: true,
+        items: {
+          include: {
+            product: true
+          }
+        },
         customer: {
             select: { name: true, email: true }
         }
@@ -314,14 +328,28 @@ export class OrderService {
     return this.prisma.order.findMany({
       where: { customerId: BigInt(customerId) },
       orderBy: { createdAt: 'desc' },
-      include: { items: true },
+      include: { 
+        items: {
+          include: {
+            product: true
+          }
+        }
+      },
     });
   }
 
   async getOrderById(customerId: string, orderId: string) {
     const order = await this.prisma.order.findUnique({
       where: { id: BigInt(orderId) },
-      include: { items: true, addresses: true, statusHistory: { orderBy: { createdAt: 'desc' } } },
+      include: { 
+        items: {
+          include: {
+            product: true
+          }
+        }, 
+        addresses: true, 
+        statusHistory: { orderBy: { createdAt: 'desc' } } 
+      },
     });
     if (!order || order.customerId !== BigInt(customerId)) {
       throw new NotFoundException('Order not found');
