@@ -26,6 +26,10 @@ export class CheckoutDto {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  @IsOptional()
+  @IsString()
+  paymentId?: string;
 }
 
 export class UpdateOrderStatusDto {

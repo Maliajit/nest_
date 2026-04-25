@@ -70,19 +70,22 @@ export class OrderService {
       const pointsEarned = Math.floor(grandTotal);
 
       // a. Create the Order
+      const shippingTotal = subtotal > 150000 ? 0 : 500;
+      const isOnline = dto.paymentMethod === 'online';
+      
       const order = await tx.order.create({
         data: {
           customer: { connect: { id: cId } },
           offer: appliedOffer ? { connect: { id: appliedOffer.id } } : undefined,
           status: 'pending',
-          paymentStatus: 'pending',
+          paymentStatus: isOnline ? 'paid' : 'pending',
           shippingStatus: 'pending',
           paymentMethod: dto.paymentMethod || 'cod',
           subtotal: new Prisma.Decimal(subtotal),
-          shippingTotal: new Prisma.Decimal(0),
+          shippingTotal: new Prisma.Decimal(shippingTotal),
           taxTotal: new Prisma.Decimal(0),
           discountTotal: new Prisma.Decimal(totalDiscount),
-          grandTotal: new Prisma.Decimal(grandTotal),
+          grandTotal: new Prisma.Decimal(Math.max(0, subtotal + shippingTotal - totalDiscount)),
           customerNote: dto.notes,
           customerFirstName: cart.customer?.name.split(' ')[0] || 'Customer',
           customerLastName: cart.customer?.name.split(' ').slice(1).join(' ') || 'Name',
@@ -92,6 +95,21 @@ export class OrderService {
           loyaltyPointsEarned: new Prisma.Decimal(pointsEarned),
         },
       });
+
+      // a2. Create Payment record if online
+      if (isOnline && dto.paymentId) {
+        await tx.payment.create({
+          data: {
+            orderId: order.id,
+            paymentMethod: 'online',
+            paymentGateway: 'razorpay',
+            transactionId: dto.paymentId,
+            amount: order.grandTotal,
+            status: 'paid',
+            paidAt: new Date(),
+          }
+        });
+      }
 
       // b. Log History
       await tx.orderStatusHistory.create({

@@ -16,6 +16,7 @@ import { MediaModule } from './modules/media/media.module';
 import { CartModule } from './modules/cart/cart.module';
 import { WishlistModule } from './modules/wishlist/wishlist.module';
 import { FeedbackModule } from './modules/feedback/feedback.module';
+import { PaymentModule } from './modules/payment/payment.module';
 
 import { AttributeModule } from './modules/product/attribute/attribute.module';
 import { SpecificationModule } from './modules/product/specification/specification.module';
@@ -39,6 +40,7 @@ import { SpecificationModule } from './modules/product/specification/specificati
     CartModule,
     WishlistModule,
     FeedbackModule,
+    PaymentModule,
   ],
   controllers: [AppController],
   providers: [AppService],

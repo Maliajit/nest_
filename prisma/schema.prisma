@@ -1194,16 +1194,18 @@ model State {
 
 model Wishlist {
   id         BigInt         @id @default(autoincrement())
-  customerId BigInt         @map("customer_id")
+  customerId BigInt?        @map("customer_id")
+  sessionId  String?        @map("session_id")
   name       String         @default("Default")
   isPublic   Int            @default(0) @map("is_public")
   createdAt  DateTime?      @map("created_at")
   updatedAt  DateTime?      @map("updated_at")
   items      WishlistItem[]
-  customer   Customer       @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customer   Customer?      @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
   @@unique([customerId, name], map: "wishlists_customer_id_name_unique")
   @@index([customerId], map: "wishlists_customer_id_index")
+  @@index([sessionId], map: "wishlists_session_id_index")
   @@map("wishlists")
 }
 

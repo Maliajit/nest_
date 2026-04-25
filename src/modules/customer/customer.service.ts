@@ -9,15 +9,35 @@ export class CustomerService {
 
   // Get all addresses for a customer
   async getAddresses(customerId: string) {
+    let cId: bigint;
+    try {
+      cId = BigInt(customerId);
+    } catch (e) {
+      return [];
+    }
     return this.prisma.customerAddress.findMany({
-      where: { customerId: BigInt(customerId) },
+      where: { customerId: cId },
     });
   }
 
   // Add a new address
   async addAddress(customerId: string, createAddressDto: CreateAddressDto) {
     const { isDefault, ...rest } = createAddressDto;
-    const cId = BigInt(customerId);
+    
+    let cId: bigint;
+    try {
+      cId = BigInt(customerId);
+    } catch (e) {
+      throw new BadRequestException(`Invalid customer ID: ${customerId}. Must be a numeric string.`);
+    }
+
+    const customer = await this.prisma.customer.findUnique({
+      where: { id: cId },
+    });
+
+    if (!customer) {
+      throw new NotFoundException(`Customer with ID ${customerId} not found. Please sign up or log in again.`);
+    }
 
     // If this is the first address or isDefault is true, set others to false
     if (isDefault) {
@@ -31,15 +51,21 @@ export class CustomerService {
       data: {
         ...rest,
         isDefault: isDefault ?? false,
-        customer: { connect: { id: cId } },
+        customerId: cId,
       },
     });
   }
 
   // Update an address
   async updateAddress(customerId: string, addressId: string, updateAddressDto: UpdateAddressDto) {
-    const cId = BigInt(customerId);
-    const aId = BigInt(addressId);
+    let cId: bigint;
+    let aId: bigint;
+    try {
+      cId = BigInt(customerId);
+      aId = BigInt(addressId);
+    } catch (e) {
+      throw new Error('Invalid ID format');
+    }
 
     // Ensure address belongs to customer
     const address = await this.prisma.customerAddress.findUnique({
@@ -66,8 +92,14 @@ export class CustomerService {
 
   // Delete an address
   async deleteAddress(customerId: string, addressId: string) {
-    const cId = BigInt(customerId);
-    const aId = BigInt(addressId);
+    let cId: bigint;
+    let aId: bigint;
+    try {
+      cId = BigInt(customerId);
+      aId = BigInt(addressId);
+    } catch (e) {
+      throw new Error('Invalid ID format');
+    }
 
     // Ensure address belongs to customer
     const address = await this.prisma.customerAddress.findUnique({
@@ -85,11 +117,20 @@ export class CustomerService {
 
   // Get single address
   async getAddressById(customerId: string, addressId: string) {
+    let cId: bigint;
+    let aId: bigint;
+    try {
+      cId = BigInt(customerId);
+      aId = BigInt(addressId);
+    } catch (e) {
+      throw new Error('Invalid ID format');
+    }
+
     const address = await this.prisma.customerAddress.findUnique({
-      where: { id: BigInt(addressId) },
+      where: { id: aId },
     });
 
-    if (!address || address.customerId !== BigInt(customerId)) {
+    if (!address || address.customerId !== cId) {
       throw new NotFoundException('Address not found');
     }
 
@@ -98,8 +139,15 @@ export class CustomerService {
 
   // Get customer profile
   async getProfile(customerId: string) {
+    let cId: bigint;
+    try {
+      cId = BigInt(customerId);
+    } catch (e) {
+      throw new BadRequestException(`Invalid customer ID: ${customerId}`);
+    }
+
     const customer = await this.prisma.customer.findUnique({
-      where: { id: BigInt(customerId) },
+      where: { id: cId },
       include: {
         _count: { select: { orders: true } },
         orders: {
@@ -121,7 +169,12 @@ export class CustomerService {
 
   // Update customer profile
   async updateProfile(customerId: string, data: any) {
-    const cId = BigInt(customerId);
+    let cId: bigint;
+    try {
+      cId = BigInt(customerId);
+    } catch (e) {
+      throw new BadRequestException(`Invalid customer ID: ${customerId}`);
+    }
 
     // If email is changing, check for duplicates
     if (data.email) {

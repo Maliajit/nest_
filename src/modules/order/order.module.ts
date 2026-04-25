@@ -5,11 +5,12 @@ import { PrismaModule } from '../../prisma/prisma.module';
 import { MarketingModule } from '../marketing/marketing.module';
 import { OrderStatusHistoryService } from './order-status-history.service';
 import { ShippingService } from './shipping.service';
+import { ShiprocketService } from './shiprocket.service';
 
 @Module({
   imports: [PrismaModule, MarketingModule],
   controllers: [OrderController],
-  providers: [OrderService, OrderStatusHistoryService, ShippingService],
-  exports: [OrderService, OrderStatusHistoryService, ShippingService],
+  providers: [OrderService, OrderStatusHistoryService, ShippingService, ShiprocketService],
+  exports: [OrderService, OrderStatusHistoryService, ShippingService, ShiprocketService],
 })
 export class OrderModule {}
