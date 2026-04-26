@@ -50,4 +50,88 @@ export class ShiprocketService {
       throw new InternalServerErrorException('Shiprocket order creation failed');
     }
   }
+
+  private cache = new Map<string, { data: any, timestamp: number }>();
+  private readonly CACHE_TTL = 15 * 60 * 1000; // 15 minutes
+
+  async checkServiceability(pickupPostcode: string, deliveryPostcode: string, weight: number) {
+    const cacheKey = `${pickupPostcode}_${deliveryPostcode}_${weight}`;
+    const cached = this.cache.get(cacheKey);
+    if (cached && (Date.now() - cached.timestamp < this.CACHE_TTL)) {
+      return cached.data;
+    }
+
+    const token = await this.getToken();
+    try {
+      // Check both Prepaid and COD in parallel
+      const [prepaidRes, codRes] = await Promise.allSettled([
+        axios.get(`${this.baseUrl}/courier/serviceability/`, {
+          params: {
+            pickup_postcode: pickupPostcode,
+            delivery_postcode: deliveryPostcode,
+            weight: weight,
+            cod: 0,
+          },
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        axios.get(`${this.baseUrl}/courier/serviceability/`, {
+          params: {
+            pickup_postcode: pickupPostcode,
+            delivery_postcode: deliveryPostcode,
+            weight: weight,
+            cod: 1,
+          },
+          headers: { Authorization: `Bearer ${token}` },
+        })
+      ]);
+
+      const prepaidData = prepaidRes.status === 'fulfilled' ? prepaidRes.value.data : null;
+      const codData = codRes.status === 'fulfilled' ? codRes.value.data : null;
+
+      const prepaidCouriers = prepaidData?.data?.available_courier_companies || [];
+      const codCouriers = codData?.data?.available_courier_companies || [];
+
+      const isServiceable = prepaidCouriers.length > 0 || codCouriers.length > 0;
+      const isCodAvailable = codCouriers.length > 0;
+
+      if (!isServiceable) {
+        const result = {
+          serviceable: false,
+          codAvailable: false,
+          rate: null,
+          message: "Delivery not available for this pincode"
+        };
+        this.cache.set(cacheKey, { data: result, timestamp: Date.now() });
+        return result;
+      }
+
+      // Filter for reliable couriers (Rating >= 4)
+      let reliableCouriers = prepaidCouriers.filter(c => c.rating >= 4);
+      if (reliableCouriers.length === 0) reliableCouriers = prepaidCouriers; // Fallback to all if none are >= 4
+
+      // Get best courier (cheapest among reliable ones)
+      const bestCourier = reliableCouriers.sort((a, b) => parseFloat(a.rate) - parseFloat(b.rate))[0] || codCouriers[0];
+
+      const result = {
+        serviceable: true,
+        codAvailable: isCodAvailable,
+        rate: parseFloat(bestCourier.rate),
+        courier_name: bestCourier.courier_name,
+        etd: bestCourier.etd,
+        message: "Success"
+      };
+      
+      this.cache.set(cacheKey, { data: result, timestamp: Date.now() });
+      return result;
+    } catch (error) {
+      console.error('Shiprocket serviceability check failed:', error.response?.data || error.message);
+      // Technical failure -> Allow ONLY Prepaid for safety
+      return {
+        serviceable: null, 
+        codAvailable: false, // Force false on API error for risk mitigation
+        rate: 500,
+        message: "Technical issue: COD disabled, shipping estimated"
+      };
+    }
+  }
 }

@@ -1,18 +1,21 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CheckoutDto } from './dto/order.dto';
 import { Prisma } from '@prisma/client';
 import { MarketingService } from '../marketing/marketing.service';
 import { LoyaltyService } from '../marketing/loyalty.service';
 import { OrderStatusHistoryService } from './order-status-history.service';
+import { ShiprocketService } from './shiprocket.service';
 
 @Injectable()
 export class OrderService {
+  private readonly logger = new Logger(OrderService.name);
   constructor(
     private prisma: PrismaService,
     private marketingService: MarketingService,
     private loyaltyService: LoyaltyService,
     private historyService: OrderStatusHistoryService,
+    private shiprocketService: ShiprocketService,
   ) {}
 
   // Create order from cart (Checkout)
@@ -70,7 +73,45 @@ export class OrderService {
       const pointsEarned = Math.floor(grandTotal);
 
       // a. Create the Order
-      const shippingTotal = subtotal > 150000 ? 0 : 500;
+      // Calculate Total Weight (Default to 0.5kg per watch if not specified)
+      let totalWeight = 0;
+      for (const item of cart.items) {
+          const itemWeight = item.productVariant.weight ? Number(item.productVariant.weight) : 0.4;
+          totalWeight += itemWeight * item.quantity;
+      }
+
+      const isCod = dto.paymentMethod === 'cod';
+      let shippingTotal = 500; // Default fallback
+
+      try {
+          const pickupPincode = process.env.SHIPROCKET_PICKUP_PINCODE || '380001';
+          const rateData = await this.shiprocketService.checkServiceability(
+              pickupPincode,
+              shippingAddr.pincode,
+              totalWeight
+          );
+
+          if (rateData.serviceable === false) {
+              this.logger.warn(`Unserviceable pincode: ${shippingAddr.pincode} for customer ${customerId}`);
+              throw new BadRequestException('Delivery is not available for this location');
+          }
+
+          if (isCod && rateData.codAvailable === false) {
+              this.logger.warn(`COD Unavailable for pincode: ${shippingAddr.pincode} for customer ${customerId}`);
+              throw new BadRequestException('Cash on Delivery is not available for this location');
+          }
+
+          if (rateData.serviceable === null) {
+              this.logger.error(`Technical failure in shipping API for pincode: ${shippingAddr.pincode}`);
+          }
+
+          shippingTotal = rateData.rate ?? 500;
+      } catch (e) {
+          if (e instanceof BadRequestException) throw e;
+          this.logger.error(`Shiprocket rate calculation failed: ${e.message}`);
+          shippingTotal = 500;
+      }
+
       const isOnline = dto.paymentMethod === 'online';
       
       const order = await tx.order.create({
@@ -355,5 +396,29 @@ export class OrderService {
       throw new NotFoundException('Order not found');
     }
     return order;
+  }
+
+  async calculateShipping(customerId: string, pincode: string) {
+    const cId = BigInt(customerId);
+    const cart = await this.prisma.cart.findFirst({
+        where: { customerId: cId, status: 'active' },
+        include: { items: { include: { productVariant: true } } }
+    });
+    if (!cart || cart.items.length === 0) return { serviceable: false, rate: null, message: "Cart is empty" };
+
+    let totalWeight = 0;
+    for (const item of cart.items) {
+        const itemWeight = item.productVariant.weight ? Number(item.productVariant.weight) : 0.4;
+        totalWeight += itemWeight * item.quantity;
+    }
+
+    const pickupPincode = process.env.SHIPROCKET_PICKUP_PINCODE || '380001';
+    const rateData = await this.shiprocketService.checkServiceability(
+        pickupPincode,
+        pincode,
+        totalWeight
+    );
+
+    return rateData;
   }
 }

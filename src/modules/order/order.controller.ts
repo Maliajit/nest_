@@ -32,4 +32,9 @@ export class OrderController {
   async cancelOrder(@Body('customerId') customerId: string, @Param('id') id: string, @Body('reason') reason: string) {
     return this.orderService.cancelOrder(customerId, id, reason);
   }
+
+  @Post('calculate-shipping')
+  async calculateShipping(@Body('customerId') customerId: string, @Body('pincode') pincode: string) {
+    return this.orderService.calculateShipping(customerId, pincode);
+  }
 }

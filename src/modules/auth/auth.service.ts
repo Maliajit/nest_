@@ -39,14 +39,21 @@ export class AuthService {
       sub: user.id.toString(), // Convert BigInt to string for JWT payload
       role: user.role 
     };
+
+    // Ensure all BigInt fields are strings and password is removed
+    const userData = { ...user };
+    if (userData.password) delete userData.password;
+    
+    // Recursively convert BigInt to string if necessary (though usually top level is enough here)
+    Object.keys(userData).forEach(key => {
+      if (typeof userData[key] === 'bigint') {
+        userData[key] = userData[key].toString();
+      }
+    });
+
     return {
       access_token: this.jwtService.sign(payload),
-      user: {
-        id: user.id.toString(),
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
+      user: userData,
     };
   }
 
