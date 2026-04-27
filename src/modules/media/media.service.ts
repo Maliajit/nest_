@@ -65,12 +65,34 @@ export class MediaService {
   }
 
   async deleteMedia(id: string | number) {
+    const media = await this.prisma.media.findUnique({
+      where: { id: BigInt(id) }
+    });
+
+    if (!media) {
+      throw new NotFoundException(`Media with ID ${id} not found.`);
+    }
+
     try {
-      return await this.prisma.media.delete({
+      // Delete from database
+      await this.prisma.media.delete({
         where: { id: BigInt(id) }
       });
+
+      // Try to delete from disk if it's a local file
+      if (media.disk === 'local' && media.filePath) {
+        const fs = require('fs');
+        const path = require('path');
+        const fullPath = path.join(process.cwd(), media.filePath);
+        
+        if (fs.existsSync(fullPath)) {
+          fs.unlinkSync(fullPath);
+        }
+      }
+
+      return { success: true, message: 'Media deleted successfully' };
     } catch (error) {
-      throw new NotFoundException(`Media with ID ${id} not found.`);
+      throw new Error(`Failed to delete media: ${error.message}`);
     }
   }
 

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param, UploadedFiles, UseInterceptors } from '@nestjs/common';
+import { Controller, Get, Post, Param, UploadedFiles, UseInterceptors, Delete } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
@@ -28,5 +28,10 @@ export class MediaController {
     @Param('category') category?: string
   ) {
     return this.mediaService.uploadMultiple(files, category);
+  }
+
+  @Delete(':id')
+  async deleteMedia(@Param('id') id: string) {
+    return this.mediaService.deleteMedia(id);
   }
 }
