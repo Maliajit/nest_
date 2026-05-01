@@ -369,6 +369,15 @@ export class ProductService {
       include: {
         brand: true,
         mainCategory: true,
+        variants: {
+          include: {
+            variantImages: {
+              include: {
+                media: true
+              }
+            }
+          }
+        }
       },
     });
 
