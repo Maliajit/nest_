@@ -34,16 +34,16 @@ export class AuthService {
 
   // Login and generate JWT
   async login(user: any) {
-    const payload = { 
-      email: user.email, 
+    const payload = {
+      email: user.email,
       sub: user.id.toString(), // Convert BigInt to string for JWT payload
-      role: user.role 
+      role: user.role
     };
 
     // Ensure all BigInt fields are strings and password is removed
     const userData = { ...user };
     if (userData.password) delete userData.password;
-    
+
     // Recursively convert BigInt to string if necessary (though usually top level is enough here)
     Object.keys(userData).forEach(key => {
       if (typeof userData[key] === 'bigint') {
