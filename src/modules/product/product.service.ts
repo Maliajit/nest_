@@ -334,10 +334,29 @@ export class ProductService {
               }
             }
           },
+          specifications: {
+            include: {
+              specification: {
+                include: {
+                  groups: {
+                    include: {
+                      group: true
+                    }
+                  }
+                }
+              }
+            }
+          },
           _count: {
             select: { 
               variants: true,
-              productMedia: true 
+              productMedia: true,
+              orderItems: true
+            }
+          },
+          orderItems: {
+            select: {
+              quantity: true
             }
           }
         },
@@ -348,6 +367,7 @@ export class ProductService {
       ...p,
       isActive: p.status === 'active' || p.status === '1',
       stock: p.qty, // Map qty to stock for frontend consistency
+      soldCount: (p as any).orderItems?.reduce((acc, item) => acc + (item.quantity || 0), 0) || 0,
     }));
 
     return {
@@ -416,12 +436,25 @@ export class ProductService {
         },
         specifications: {
           include: {
-            specification: true
+            specification: {
+              include: {
+                groups: {
+                  include: {
+                    group: true
+                  }
+                }
+              }
+            }
           }
         },
         productMedia: {
           include: {
             media: true
+          }
+        },
+        orderItems: {
+          select: {
+            quantity: true
           }
         },
         _count: {
@@ -449,6 +482,7 @@ export class ProductService {
       isActive: product.status === 'active' || product.status === '1',
       averageRating: stats._avg.rating || 0,
       reviewCount: stats._count.rating || 0,
+      soldCount: (product as any).orderItems?.reduce((acc, item) => acc + (item.quantity || 0), 0) || 0,
     };
   }
 
