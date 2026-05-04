@@ -131,11 +131,20 @@ export class OrderService {
           customerFirstName: cart.customer?.name.split(' ')[0] || 'Customer',
           customerLastName: cart.customer?.name.split(' ').slice(1).join(' ') || 'Name',
           customerMobile: cart.customer?.mobile,
+          customerDob: dto.dob ? new Date(dto.dob) : (cart.customer?.dob || null),
           orderNumber: `ORD-${Date.now()}`,
           loyaltyPointsUsed: new Prisma.Decimal(dto.redeemPoints || 0),
           loyaltyPointsEarned: new Prisma.Decimal(pointsEarned),
         },
       });
+
+      // a1. Update Customer Profile with DOB if provided
+      if (dto.dob) {
+        await tx.customer.update({
+          where: { id: cId },
+          data: { dob: new Date(dto.dob) },
+        });
+      }
 
       // a2. Create Payment record if online
       if (isOnline && dto.paymentId) {

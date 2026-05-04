@@ -138,6 +138,7 @@ model Customer {
   name                 String
   email                String?                 @unique(map: "customers_email_unique")
   mobile               String?                 @unique(map: "customers_mobile_unique")
+  dob                  DateTime?               @map("dob")
   password             String
   status               Int                     @default(1)
   isBlock              Boolean                 @default(false) @map("is_block")
@@ -1482,6 +1483,7 @@ model OrderSequence {
   @@map("order_sequences")
 }
 
+
 model Order {
   id                  BigInt               @id @default(autoincrement())
   customerId          BigInt?              @map("customer_id")
@@ -1497,6 +1499,7 @@ model Order {
   customerFirstName   String               @map("customer_first_name")
   customerLastName    String               @map("customer_last_name")
   customerMobile      String?              @map("customer_mobile")
+  customerDob         DateTime?            @map("customer_dob")
   shippingMethodId    BigInt?              @map("shipping_method_id")
   paymentMethod       String?              @map("payment_method")
   offerId             BigInt?              @map("offer_id")

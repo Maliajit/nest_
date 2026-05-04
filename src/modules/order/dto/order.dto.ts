@@ -12,6 +12,10 @@ export class CheckoutDto {
 
   @IsOptional()
   @IsString()
+  dob?: string;
+
+  @IsOptional()
+  @IsString()
   paymentMethod?: string = 'cod'; // Default to Cash on Delivery
 
   @IsOptional()

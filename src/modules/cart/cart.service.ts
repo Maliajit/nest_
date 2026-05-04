@@ -24,7 +24,7 @@ export class CartService {
       where: isNumeric 
         ? { customerId: BigInt(customerIdStr), status: 'active' }
         : { sessionId: customerIdStr, status: 'active' },
-      include: { items: { include: { productVariant: { include: { product: true } } } } },
+      include: { items: { include: { productVariant: { include: { product: true, variantAttributes: { include: { attributeValue: { include: { attribute: true } } } }, variantImages: { include: { media: true } } } } } } },
     });
 
     if (!cart) {
@@ -35,7 +35,7 @@ export class CartService {
               customer: { connect: { id: BigInt(customerIdStr) } },
               status: 'active',
             },
-            include: { items: { include: { productVariant: { include: { product: true } } } } },
+            include: { items: { include: { productVariant: { include: { product: true, variantAttributes: { include: { attributeValue: { include: { attribute: true } } } }, variantImages: { include: { media: true } } } } } } },
           });
         } else {
           cart = await this.prisma.cart.create({
@@ -43,7 +43,7 @@ export class CartService {
               sessionId: customerIdStr,
               status: 'active',
             },
-            include: { items: { include: { productVariant: { include: { product: true } } } } },
+            include: { items: { include: { productVariant: { include: { product: true, variantAttributes: { include: { attributeValue: { include: { attribute: true } } } }, variantImages: { include: { media: true } } } } } } },
           });
         }
       } catch (err) {
@@ -53,7 +53,7 @@ export class CartService {
             sessionId: customerIdStr,
             status: 'active',
           },
-          include: { items: { include: { productVariant: { include: { product: true } } } } },
+          include: { items: { include: { productVariant: { include: { product: true, variantAttributes: { include: { attributeValue: { include: { attribute: true } } } }, variantImages: { include: { media: true } } } } } } },
         });
       }
     }

@@ -26,8 +26,17 @@ export class WishlistService {
                 product: true,
                 variantAttributes: {
                   include: {
-                    attributeValue: true
+                    attributeValue: {
+                        include: {
+                            attribute: true
+                        }
+                    }
                   }
+                },
+                variantImages: {
+                    include: {
+                        media: true
+                    }
                 }
               } 
             } 
@@ -49,8 +58,17 @@ export class WishlistService {
                 product: true,
                 variantAttributes: {
                   include: {
-                    attributeValue: true
+                    attributeValue: {
+                      include: {
+                        attribute: true
+                      }
+                    }
                   }
+                },
+                variantImages: {
+                    include: {
+                        media: true
+                    }
                 }
               } 
             } 
@@ -69,8 +87,17 @@ export class WishlistService {
                 product: true,
                 variantAttributes: {
                   include: {
-                    attributeValue: true
+                    attributeValue: {
+                      include: {
+                        attribute: true
+                      }
+                    }
                   }
+                },
+                variantImages: {
+                    include: {
+                        media: true
+                    }
                 }
               } 
             } 
@@ -91,8 +118,17 @@ export class WishlistService {
                 product: true,
                 variantAttributes: {
                   include: {
-                    attributeValue: true
+                    attributeValue: {
+                      include: {
+                        attribute: true
+                      }
+                    }
                   }
+                },
+                variantImages: {
+                    include: {
+                        media: true
+                    }
                 }
               } 
             } 
