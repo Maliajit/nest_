@@ -242,17 +242,18 @@ export class ProductService {
   }
 
   async getAllProducts(filters: any = {}) {
-    const {
-      search,
-      categoryId,
-      brandId,
-      minPrice,
-      maxPrice,
-      sort,
-      status,
-      page = 1,
-      limit = 100, // Increased default limit for admin lists
-    } = filters;
+    try {
+      const {
+        search,
+        categoryId,
+        brandId,
+        minPrice,
+        maxPrice,
+        sort,
+        status,
+        page = 1,
+        limit = 100, // Increased default limit for admin lists
+      } = filters;
 
     const where: Prisma.ProductWhereInput = {};
     
@@ -370,15 +371,18 @@ export class ProductService {
       soldCount: (p as any).orderItems?.reduce((acc, item) => acc + (item.quantity || 0), 0) || 0,
     }));
 
-    return {
-      success: true,
-      data: mappedProducts,
-      meta: {
-        total,
-        page,
-        lastPage: Math.ceil(total / limit),
-      },
-    };
+      return {
+        success: true,
+        data: mappedProducts,
+        meta: {
+          total,
+          page,
+          lastPage: Math.ceil(total / limit),
+        },
+      };
+    } catch (error) {
+      this.handlePrismaError(error, 'Get All Products');
+    }
   }
 
   async getFeaturedProducts() {

@@ -18,7 +18,22 @@ export class WishlistService {
       where: isNumeric 
         ? { customerId: BigInt(customerIdStr) }
         : { sessionId: customerIdStr },
-      include: { items: { include: { productVariant: { include: { product: true } } } } },
+      include: { 
+        items: { 
+          include: { 
+            productVariant: { 
+              include: { 
+                product: true,
+                variantAttributes: {
+                  include: {
+                    attributeValue: true
+                  }
+                }
+              } 
+            } 
+          } 
+        } 
+      },
     });
 
     if (!wishlist) {
@@ -26,19 +41,64 @@ export class WishlistService {
         if (isNumeric) {
           wishlist = await this.prisma.wishlist.create({
             data: { customerId: BigInt(customerIdStr), name: 'Default' },
-            include: { items: { include: { productVariant: { include: { product: true } } } } },
+            include: { 
+        items: { 
+          include: { 
+            productVariant: { 
+              include: { 
+                product: true,
+                variantAttributes: {
+                  include: {
+                    attributeValue: true
+                  }
+                }
+              } 
+            } 
+          } 
+        } 
+      },
           });
         } else {
           wishlist = await this.prisma.wishlist.create({
             data: { sessionId: customerIdStr, name: 'Default' },
-            include: { items: { include: { productVariant: { include: { product: true } } } } },
+            include: { 
+        items: { 
+          include: { 
+            productVariant: { 
+              include: { 
+                product: true,
+                variantAttributes: {
+                  include: {
+                    attributeValue: true
+                  }
+                }
+              } 
+            } 
+          } 
+        } 
+      },
           });
         }
       } catch (err) {
         // Fallback for non-existent numeric users
         wishlist = await this.prisma.wishlist.create({
           data: { sessionId: customerIdStr, name: 'Default' },
-          include: { items: { include: { productVariant: { include: { product: true } } } } },
+          include: { 
+        items: { 
+          include: { 
+            productVariant: { 
+              include: { 
+                product: true,
+                variantAttributes: {
+                  include: {
+                    attributeValue: true
+                  }
+                }
+              } 
+            } 
+          } 
+        } 
+      },
         });
       }
     }
