@@ -22,10 +22,9 @@ export class CreateAddressDto {
   @Matches(/^[a-zA-Z\s]+$/, { message: 'City must only contain letters' })
   city: string;
 
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
-  @Matches(/^[a-zA-Z\s]+$/, { message: 'State must only contain letters' })
-  state: string;
+  state?: string;
 
   @IsNotEmpty()
   @IsString()
@@ -71,7 +70,6 @@ export class UpdateAddressDto {
 
   @IsOptional()
   @IsString()
-  @Matches(/^[a-zA-Z\s]+$/)
   state?: string;
 
   @IsOptional()

@@ -40,7 +40,8 @@ export class WishlistService {
                 }
               } 
             } 
-          } 
+          },
+          orderBy: { id: 'asc' }
         } 
       },
     });

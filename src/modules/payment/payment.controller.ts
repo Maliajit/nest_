@@ -1,14 +1,23 @@
 import { Controller, Post, Body, BadRequestException } from '@nestjs/common';
 import { PaymentService } from './payment.service';
-import { CreatePaymentOrderDto } from './dto/payment.dto';
+import { OrderService } from '../order/order.service';
 
 @Controller('payments')
 export class PaymentController {
-  constructor(private readonly paymentService: PaymentService) {}
+  constructor(
+    private readonly paymentService: PaymentService,
+    private readonly orderService: OrderService
+  ) {}
 
   @Post('create-order')
-  async createOrder(@Body() dto: CreatePaymentOrderDto) {
-    return this.paymentService.createOrder(dto.amount, 'INR', dto.receipt);
+  async createOrder(@Body() body: { customerId: string; pincode?: string; receipt: string }) {
+    if (!body.customerId) throw new BadRequestException('customerId is required');
+    
+    // SECURITY: Calculate total on server, do NOT trust frontend amount
+    const totals = await this.orderService.calculateOrderTotal(body.customerId, body.pincode);
+    if (totals.total <= 0) throw new BadRequestException('Invalid order total');
+    
+    return this.paymentService.createOrder(totals.total, 'INR', body.receipt);
   }
 
   @Post('verify')

@@ -393,7 +393,7 @@ export class OrderService {
 
   // Get orders for a specific customer
   async getOrders(customerId: string) {
-    return this.prisma.order.findMany({
+    const orders = await this.prisma.order.findMany({
       where: { customerId: BigInt(customerId) },
       orderBy: { createdAt: 'desc' },
       include: { 
@@ -422,6 +422,7 @@ export class OrderService {
         }
       },
     });
+    return { success: true, data: orders };
   }
 
   async getOrderById(customerId: string, orderId: string) {
@@ -458,7 +459,34 @@ export class OrderService {
     if (!order || order.customerId !== BigInt(customerId)) {
       throw new NotFoundException('Order not found');
     }
-    return order;
+    return { success: true, data: order };
+  }
+
+  async calculateOrderTotal(customerId: string, pincode?: string) {
+    const cId = BigInt(customerId);
+    const cart = await this.prisma.cart.findFirst({
+        where: { customerId: cId, status: 'active' },
+        include: { items: { include: { productVariant: true } } }
+    });
+
+    if (!cart || cart.items.length === 0) {
+        return { subtotal: 0, shipping: 0, tax: 0, total: 0 };
+    }
+
+    const subtotal = Number(cart.subtotal);
+    let shippingTotal = 0;
+
+    if (pincode) {
+        const rateData = await this.calculateShipping(customerId, pincode);
+        shippingTotal = rateData.rate ?? 500;
+    }
+
+    return {
+        subtotal,
+        shipping: shippingTotal,
+        tax: 0,
+        total: subtotal + shippingTotal
+    };
   }
 
   async calculateShipping(customerId: string, pincode: string) {

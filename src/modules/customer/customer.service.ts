@@ -50,6 +50,7 @@ export class CustomerService {
     return this.prisma.customerAddress.create({
       data: {
         ...rest,
+        state: rest.state || 'Unknown',
         isDefault: isDefault ?? false,
         customerId: cId,
       },

@@ -4,6 +4,7 @@ import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { BigIntInterceptor } from './common/interceptors/bigint.interceptor';
+import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 
 // Use a BigInt to JSON patch to avoid serialization errors (redundant with interceptor but helpful for direct JSON.stringify)
 (BigInt.prototype as any).toJSON = function () {
@@ -34,8 +35,9 @@ async function bootstrap() {
     transform: true,
   }));
 
-  // Global BigInt interceptor
+  // Global interceptors
   app.useGlobalInterceptors(new BigIntInterceptor());
+  app.useGlobalInterceptors(new ResponseInterceptor());
 
   // Swagger Documentation
   const config = new DocumentBuilder()

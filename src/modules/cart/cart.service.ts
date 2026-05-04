@@ -87,37 +87,9 @@ export class CartService {
   // Add item to cart
   async addItem(customerId: string, dto: AddToCartDto) {
     try {
-      if (!dto.variantId && !dto.productId) throw new BadRequestException('variantId or productId is required');
+      if (!dto.variantId) throw new BadRequestException('variantId is mandatory for all cart operations');
       const cart = await this.getOrCreateCart(customerId);
-      
-      let variantId: bigint;
-
-      if (dto.variantId) {
-        variantId = BigInt(dto.variantId);
-      } else {
-        // Find or create default variant for simple product
-        const pId = BigInt(dto.productId!);
-        const product = await this.prisma.product.findUnique({
-          where: { id: pId },
-          include: { variants: true }
-        });
-        if (!product) throw new NotFoundException('Product not found');
-        
-        if (product.variants.length > 0) {
-          variantId = product.variants[0].id;
-        } else {
-          // Create a default variant if missing
-          const newVariant = await this.prisma.productVariant.create({
-            data: {
-              productId: pId,
-              sku: `DEF-${product.slug}-${Date.now()}`,
-              price: product.price || new Prisma.Decimal(0),
-              qty: 99,
-            }
-          });
-          variantId = newVariant.id;
-        }
-      }
+      const variantId = BigInt(dto.variantId);
 
       // Validate variant exists
       const variant = await this.prisma.productVariant.findUnique({

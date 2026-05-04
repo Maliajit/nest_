@@ -37,4 +37,9 @@ export class OrderController {
   async calculateShipping(@Body('customerId') customerId: string, @Body('pincode') pincode: string) {
     return this.orderService.calculateShipping(customerId, pincode);
   }
+
+  @Post('calculate-total')
+  async calculateTotal(@Body('customerId') customerId: string, @Body('pincode') pincode?: string) {
+    return this.orderService.calculateOrderTotal(customerId, pincode);
+  }
 }
