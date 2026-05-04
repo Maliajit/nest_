@@ -135,6 +135,7 @@ export class OrderService {
           orderNumber: `ORD-${Date.now()}`,
           loyaltyPointsUsed: new Prisma.Decimal(dto.redeemPoints || 0),
           loyaltyPointsEarned: new Prisma.Decimal(pointsEarned),
+          createdAt: new Date(),
         },
       });
 
@@ -266,7 +267,24 @@ export class OrderService {
           items: {
             include: {
               product: true,
-              productVariant: true
+              productVariant: {
+                include: {
+                  variantImages: {
+                    include: {
+                      media: true
+                    }
+                  },
+                  variantAttributes: {
+                    include: {
+                      attributeValue: {
+                        include: {
+                          attribute: true
+                        }
+                      }
+                    }
+                  }
+                }
+              }
             }
           }
         }
@@ -381,7 +399,25 @@ export class OrderService {
       include: { 
         items: {
           include: {
-            product: true
+            product: true,
+            productVariant: {
+              include: {
+                variantImages: {
+                  include: {
+                    media: true
+                  }
+                },
+                variantAttributes: {
+                  include: {
+                    attributeValue: {
+                      include: {
+                        attribute: true
+                      }
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       },
@@ -394,7 +430,25 @@ export class OrderService {
       include: { 
         items: {
           include: {
-            product: true
+            product: true,
+            productVariant: {
+              include: {
+                variantImages: {
+                  include: {
+                    media: true
+                  }
+                },
+                variantAttributes: {
+                  include: {
+                    attributeValue: {
+                      include: {
+                        attribute: true
+                      }
+                    }
+                  }
+                }
+              }
+            }
           }
         }, 
         addresses: true, 
