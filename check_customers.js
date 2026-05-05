@@ -6,7 +6,13 @@ async function main() {
     take: 5
   });
   console.log('Customers in database:');
-  customers.forEach(c => console.log(`ID: ${c.id}, Name: ${c.name}, Email: ${c.email}`));
+  customers.forEach(c => {
+    // Handling BigInt for logging
+    const sanitized = JSON.parse(JSON.stringify(c, (key, value) =>
+      typeof value === 'bigint' ? value.toString() : value
+    ));
+    console.log(`ID: ${sanitized.id}, Name: ${sanitized.name}, Mobile: ${sanitized.mobile}`);
+  });
 }
 
 main()

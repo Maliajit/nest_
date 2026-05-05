@@ -56,6 +56,20 @@ export class AuthService {
     return null;
   }
 
+  async validateCustomerByOtp(mobile: string, otp: string) {
+    if (otp !== '1234') {
+      return null;
+    }
+
+    const customer = await this.prisma.customer.findUnique({ where: { mobile } });
+
+    if (customer) {
+      return this.sanitizeUser(customer, 'customer');
+    }
+
+    return null;
+  }
+
   async login(user: any) {
     const payload = {
       email: user.email,
@@ -94,7 +108,11 @@ export class AuthService {
   }
 
   async registerCustomer(registerDto: RegisterDto) {
-    const { email, password, name, mobile } = registerDto;
+    const { email, password, name, mobile, otp } = registerDto;
+
+    if (otp !== '1234') {
+      throw new BadRequestException('Invalid OTP');
+    }
 
     const existingCustomer = await this.prisma.customer.findUnique({
       where: { email },
@@ -113,7 +131,8 @@ export class AuthService {
     }
 
     try {
-      const hashedPassword = await bcrypt.hash(password, 10);
+      const effectivePassword = password || `OTP_${Math.random().toString(36).slice(-8)}`;
+      const hashedPassword = await bcrypt.hash(effectivePassword, 10);
       const customer = await this.prisma.customer.create({
         data: {
           email,
