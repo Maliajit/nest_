@@ -24,7 +24,35 @@ export class CartService {
       where: isNumeric 
         ? { customerId: BigInt(customerIdStr), status: 'active' }
         : { sessionId: customerIdStr, status: 'active' },
-      include: { items: { include: { productVariant: { include: { product: true, variantAttributes: { include: { attributeValue: { include: { attribute: true } } } }, variantImages: { include: { media: true } } } } } } },
+      include: { 
+        items: { 
+          include: { 
+            productVariant: { 
+              include: { 
+                product: true, 
+                variantAttributes: { 
+                  include: { 
+                    attributeValue: { 
+                      include: { 
+                        attribute: true 
+                      } 
+                    } 
+                  } 
+                }, 
+                variantImages: { 
+                  include: { 
+                    media: true 
+                  } 
+                } 
+              } 
+            } 
+          },
+          orderBy: [
+            { createdAt: 'asc' },
+            { id: 'asc' }
+          ]
+        } 
+      },
     });
 
     if (!cart) {
@@ -35,7 +63,35 @@ export class CartService {
               customer: { connect: { id: BigInt(customerIdStr) } },
               status: 'active',
             },
-            include: { items: { include: { productVariant: { include: { product: true, variantAttributes: { include: { attributeValue: { include: { attribute: true } } } }, variantImages: { include: { media: true } } } } } } },
+            include: { 
+        items: { 
+          include: { 
+            productVariant: { 
+              include: { 
+                product: true, 
+                variantAttributes: { 
+                  include: { 
+                    attributeValue: { 
+                      include: { 
+                        attribute: true 
+                      } 
+                    } 
+                  } 
+                }, 
+                variantImages: { 
+                  include: { 
+                    media: true 
+                  } 
+                } 
+              } 
+            } 
+          },
+          orderBy: [
+            { createdAt: 'asc' },
+            { id: 'asc' }
+          ]
+        } 
+      },
           });
         } else {
           cart = await this.prisma.cart.create({
@@ -43,7 +99,35 @@ export class CartService {
               sessionId: customerIdStr,
               status: 'active',
             },
-            include: { items: { include: { productVariant: { include: { product: true, variantAttributes: { include: { attributeValue: { include: { attribute: true } } } }, variantImages: { include: { media: true } } } } } } },
+            include: { 
+        items: { 
+          include: { 
+            productVariant: { 
+              include: { 
+                product: true, 
+                variantAttributes: { 
+                  include: { 
+                    attributeValue: { 
+                      include: { 
+                        attribute: true 
+                      } 
+                    } 
+                  } 
+                }, 
+                variantImages: { 
+                  include: { 
+                    media: true 
+                  } 
+                } 
+              } 
+            } 
+          },
+          orderBy: [
+            { createdAt: 'asc' },
+            { id: 'asc' }
+          ]
+        } 
+      },
           });
         }
       } catch (err) {
@@ -53,7 +137,32 @@ export class CartService {
             sessionId: customerIdStr,
             status: 'active',
           },
-          include: { items: { include: { productVariant: { include: { product: true, variantAttributes: { include: { attributeValue: { include: { attribute: true } } } }, variantImages: { include: { media: true } } } } } } },
+          include: { 
+        items: { 
+          include: { 
+            productVariant: { 
+              include: { 
+                product: true, 
+                variantAttributes: { 
+                  include: { 
+                    attributeValue: { 
+                      include: { 
+                        attribute: true 
+                      } 
+                    } 
+                  } 
+                }, 
+                variantImages: { 
+                  include: { 
+                    media: true 
+                  } 
+                } 
+              } 
+            } 
+          },
+          orderBy: { createdAt: 'asc' }
+        } 
+      },
         });
       }
     }
@@ -121,7 +230,7 @@ export class CartService {
       });
 
       await this.updateCartTotals(cart.id);
-      return newItem;
+      return this.getCart(customerId);
     } catch (err) {
       console.error('CRITICAL ERROR in addItem:', err);
       throw err;
@@ -157,7 +266,7 @@ export class CartService {
     });
 
     await this.updateCartTotals(item.cartId);
-    return updatedItem;
+    return this.getCart(customerId);
   }
 
   // Remove item
@@ -182,7 +291,7 @@ export class CartService {
     const cartId = item.cartId;
     await this.prisma.cartItem.delete({ where: { id: iId } });
     await this.updateCartTotals(cartId);
-    return { success: true };
+    return this.getCart(customerId);
   }
 
   // Clear cart
@@ -198,7 +307,7 @@ export class CartService {
       });
       await this.updateCartTotals(cart.id);
     }
-    return { success: true };
+    return this.getCart(customerId);
   }
 
   // Recalculate totals

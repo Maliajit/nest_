@@ -359,7 +359,12 @@ export class ProductService {
             select: {
               quantity: true
             }
-          }
+          },
+          productMedia: {
+            include: {
+              media: true
+            }
+          },
         },
       }),
     ]);
@@ -401,7 +406,25 @@ export class ProductService {
               }
             }
           }
-        }
+        },
+        specifications: {
+          include: {
+            specification: {
+              include: {
+                groups: {
+                  include: {
+                    group: true
+                  }
+                }
+              }
+            }
+          }
+        },
+        productMedia: {
+          include: {
+            media: true
+          }
+        },
       },
     });
 

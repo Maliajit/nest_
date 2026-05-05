@@ -20,11 +20,13 @@ export class OrderService {
 
   // Create order from cart (Checkout)
   async checkout(customerId: string, dto: CheckoutDto) {
-    const cId = BigInt(customerId);
+    const customerIdStr = customerId?.toString() || '';
+    const isNumeric = !isNaN(Number(customerIdStr)) && !customerIdStr.includes('usr_') && customerIdStr !== '';
+    const cId = isNumeric ? BigInt(customerIdStr) : null;
 
     // 1. Get active cart
     const cart = await this.prisma.cart.findFirst({
-      where: { customerId: cId, status: 'active' },
+      where: cId ? { customerId: cId, status: 'active' } : { sessionId: customerIdStr, status: 'active' },
       include: { 
         items: { 
           include: { 
@@ -128,9 +130,9 @@ export class OrderService {
           discountTotal: new Prisma.Decimal(totalDiscount),
           grandTotal: new Prisma.Decimal(Math.max(0, subtotal + shippingTotal - totalDiscount)),
           customerNote: dto.notes,
-          customerFirstName: cart.customer?.name.split(' ')[0] || 'Customer',
-          customerLastName: cart.customer?.name.split(' ').slice(1).join(' ') || 'Name',
-          customerMobile: cart.customer?.mobile,
+          customerFirstName: cart.customer?.name?.split(' ')[0] || 'Customer',
+          customerLastName: cart.customer?.name?.split(' ').slice(1).join(' ') || 'Name',
+          customerMobile: cart.customer?.mobile || '',
           customerDob: dto.dob ? new Date(dto.dob) : (cart.customer?.dob || null),
           orderNumber: `ORD-${Date.now()}`,
           loyaltyPointsUsed: new Prisma.Decimal(dto.redeemPoints || 0),
@@ -176,8 +178,8 @@ export class OrderService {
         data: {
           order: { connect: { id: order.id } },
           type: 'shipping',
-          firstName: shippingAddr.name.split(' ')[0] || 'Customer',
-          lastName: shippingAddr.name.split(' ').slice(1).join(' ') || 'Name',
+          firstName: shippingAddr.name?.split(' ')[0] || 'Customer',
+          lastName: shippingAddr.name?.split(' ').slice(1).join(' ') || 'Name',
           email: cart.customer?.email || '',
           phone: shippingAddr.mobile,
           address1: shippingAddr.address,
@@ -208,7 +210,7 @@ export class OrderService {
       }
 
       // e. Track Marketing Usage
-      if (appliedOffer) {
+      if (appliedOffer && cId) {
           await tx.offerUsage.create({
               data: {
                   offerId: appliedOffer.id,
@@ -224,7 +226,7 @@ export class OrderService {
       }
 
       // f. Spend Points
-      if (dto.redeemPoints && dto.redeemPoints > 0) {
+      if (dto.redeemPoints && dto.redeemPoints > 0 && cId) {
           const loyalty = await tx.customerLoyalty.findFirst({ where: { customerId: cId } });
           if (loyalty) {
               await tx.loyaltyTransaction.create({

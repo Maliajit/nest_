@@ -1,10 +1,24 @@
-import { Controller, Get, Param, Put, Post, Delete, Body } from '@nestjs/common';
+import { Controller, Get, Param, Put, Post, Delete, Body, Req, UseGuards } from '@nestjs/common';
 import { CustomerService } from './customer.service';
 import { CreateAddressDto, UpdateAddressDto } from './dto/address.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 
 @Controller('customers')
 export class CustomerController {
   constructor(private readonly customerService: CustomerService) {}
+
+  @UseGuards(JwtAuthGuard)
+  @Get('me/dashboard')
+  async getDashboard(@Req() req: any) {
+    return this.customerService.getDashboard(req.user.userId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Put('me')
+  async updateMyProfile(@Req() req: any, @Body() updateProfileDto: UpdateProfileDto) {
+    return this.customerService.updateProfile(req.user.userId, updateProfileDto);
+  }
 
   @Get()
   async findAll() {
@@ -21,7 +35,6 @@ export class CustomerController {
     return this.customerService.updateCustomer(id, updateCustomerDto);
   }
 
-  // Addresses Endpoints
   @Get(':id/addresses')
   async getAddresses(@Param('id') customerId: string) {
     return this.customerService.getAddresses(customerId);

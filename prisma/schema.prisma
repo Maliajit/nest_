@@ -1093,8 +1093,8 @@ model Cart {
   shippingAddressId BigInt?    @map("shipping_address_id")
   billingAddressId  BigInt?    @map("billing_address_id")
   abandonedAt       DateTime?  @map("abandoned_at")
-  createdAt         DateTime?  @map("created_at")
-  updatedAt         DateTime?  @map("updated_at")
+  createdAt         DateTime?  @default(now()) @map("created_at")
+  updatedAt         DateTime?  @updatedAt @map("updated_at")
   items             CartItem[]
   currency          Currency?  @relation(fields: [currencyId], references: [id])
   customer          Customer?  @relation(fields: [customerId], references: [id], onDelete: Cascade)
@@ -1121,8 +1121,8 @@ model CartItem {
   discountAmount   Decimal        @default(0.00) @map("discount_amount")
   offerId          BigInt?        @map("offer_id")
   attributes       Json?
-  createdAt        DateTime?      @map("created_at")
-  updatedAt        DateTime?      @map("updated_at")
+  createdAt        DateTime?      @default(now()) @map("created_at")
+  updatedAt        DateTime?      @updatedAt @map("updated_at")
   productId        BigInt?
   cart             Cart           @relation(fields: [cartId], references: [id], onDelete: Cascade)
   offer            Offer?         @relation(fields: [offerId], references: [id])

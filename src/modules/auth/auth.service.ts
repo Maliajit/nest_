@@ -4,6 +4,9 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+
+type AuthRole = 'customer' | 'admin';
 
 @Injectable()
 export class AuthService {
@@ -12,56 +15,87 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
-  // Validate user for local strategy (works for both Admin and Customer)
-  async validateUser(email: string, pass: string): Promise<any> {
-    // Check in Customers table first
-    let user: any = await this.prisma.customer.findUnique({ where: { email } });
-    let role = 'customer';
+  private sanitizeUser<T extends Record<string, any>>(user: T, role: AuthRole) {
+    const { password, ...result } = user;
+    const userData: Record<string, any> = { ...result, role };
 
-    if (!user) {
-      // Check in Admins table
-      user = await this.prisma.admin.findUnique({ where: { email } });
-      role = 'admin';
-    }
-
-    if (user && await bcrypt.compare(pass, user.password)) {
-      // Return user without password
-      const { password, ...result } = user;
-      return { ...result, role };
-    }
-    return null;
-  }
-
-  // Login and generate JWT
-  async login(user: any) {
-    const payload = {
-      email: user.email,
-      sub: user.id.toString(), // Convert BigInt to string for JWT payload
-      role: user.role
-    };
-
-    // Ensure all BigInt fields are strings and password is removed
-    const userData = { ...user };
-    if (userData.password) delete userData.password;
-
-    // Recursively convert BigInt to string if necessary (though usually top level is enough here)
-    Object.keys(userData).forEach(key => {
+    Object.keys(userData).forEach((key) => {
       if (typeof userData[key] === 'bigint') {
         userData[key] = userData[key].toString();
       }
     });
 
+    return userData;
+  }
+
+  // Shared validator for strategies that can authenticate either role.
+  async validateUser(email: string, pass: string): Promise<any> {
+    let user: any = await this.prisma.customer.findUnique({ where: { email } });
+    let role: AuthRole = 'customer';
+
+    if (!user) {
+      user = await this.prisma.admin.findUnique({ where: { email } });
+      role = 'admin';
+    }
+
+    if (user && await bcrypt.compare(pass, user.password)) {
+      return this.sanitizeUser(user, role);
+    }
+
+    return null;
+  }
+
+  // Customer login must never authenticate admins through the customer portal.
+  async validateCustomer(email: string, pass: string) {
+    const customer = await this.prisma.customer.findUnique({ where: { email } });
+
+    if (customer && await bcrypt.compare(pass, customer.password)) {
+      return this.sanitizeUser(customer, 'customer');
+    }
+
+    return null;
+  }
+
+  async login(user: any) {
+    const payload = {
+      email: user.email,
+      sub: user.id.toString(),
+      role: user.role as AuthRole,
+    };
+
     return {
       access_token: this.jwtService.sign(payload),
-      user: userData,
+      user,
     };
   }
 
-  // Register a new customer
+  async getAuthenticatedUser(userId: string, role: AuthRole) {
+    if (role === 'admin') {
+      const admin = await this.prisma.admin.findUnique({
+        where: { id: BigInt(userId) },
+      });
+
+      if (!admin) {
+        throw new UnauthorizedException('Session is no longer valid');
+      }
+
+      return this.sanitizeUser(admin, 'admin');
+    }
+
+    const customer = await this.prisma.customer.findUnique({
+      where: { id: BigInt(userId) },
+    });
+
+    if (!customer) {
+      throw new UnauthorizedException('Session is no longer valid');
+    }
+
+    return this.sanitizeUser(customer, 'customer');
+  }
+
   async registerCustomer(registerDto: RegisterDto) {
     const { email, password, name, mobile } = registerDto;
 
-    // RULE 4: Validate before DB - Check for duplicates
     const existingCustomer = await this.prisma.customer.findUnique({
       where: { email },
     });
@@ -78,7 +112,6 @@ export class AuthService {
       }
     }
 
-    // RULE 5: Safe DB calls
     try {
       const hashedPassword = await bcrypt.hash(password, 10);
       const customer = await this.prisma.customer.create({
@@ -87,27 +120,51 @@ export class AuthService {
           name,
           mobile,
           password: hashedPassword,
-          status: 1, // Active
+          status: 1,
         },
       });
 
-      const { password: _, ...result } = customer;
-      return result;
+      return this.sanitizeUser(customer, 'customer');
     } catch (error) {
-      // RULE 3: Proper error handling
       throw new BadRequestException('Failed to register customer: ' + error.message);
     }
   }
 
-  // Admin login logic (if separate from customer login)
+  async resetCustomerPassword(resetPasswordDto: ResetPasswordDto) {
+    const { email, password } = resetPasswordDto;
+
+    const customer = await this.prisma.customer.findUnique({
+      where: { email },
+    });
+
+    if (!customer) {
+      throw new BadRequestException('No customer account found with this email');
+    }
+
+    try {
+      const hashedPassword = await bcrypt.hash(password, 10);
+      await this.prisma.customer.update({
+        where: { email },
+        data: { password: hashedPassword },
+      });
+
+      return {
+        message: 'Password updated successfully',
+        email,
+      };
+    } catch (error) {
+      throw new BadRequestException('Failed to update password: ' + error.message);
+    }
+  }
+
   async validateAdmin(loginDto: LoginDto) {
     const { email, password } = loginDto;
     const admin = await this.prisma.admin.findUnique({ where: { email } });
 
     if (admin && await bcrypt.compare(password, admin.password)) {
-      const { password: _, ...result } = admin;
-      return this.login({ ...result, role: 'admin' });
+      return this.login(this.sanitizeUser(admin, 'admin'));
     }
+
     throw new UnauthorizedException('Invalid admin credentials');
   }
 }
