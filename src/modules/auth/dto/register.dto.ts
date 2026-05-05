@@ -7,10 +7,14 @@ export class RegisterDto {
   @IsEmail()
   email: string;
 
-  @IsNotEmpty()
+  @IsOptional()
   @MinLength(8)
-  password: string;
+  password?: string;
 
   @IsOptional()
   mobile?: string;
+
+  @IsNotEmpty()
+  @MinLength(4)
+  otp: string;
 }

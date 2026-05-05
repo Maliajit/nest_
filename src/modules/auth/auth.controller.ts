@@ -4,6 +4,7 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { LoginOtpDto } from './dto/login-otp.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -32,6 +33,22 @@ export class AuthController {
 
     const result = await this.authService.login(user);
     this.logger.log(`Customer login success for email=${loginDto.email}`);
+    return result;
+  }
+
+  @Post('login-otp')
+  @HttpCode(HttpStatus.OK)
+  async loginOtp(@Body() loginOtpDto: LoginOtpDto) {
+    this.logger.log(`Customer OTP login attempt for mobile=${loginOtpDto.mobile}`);
+    const user = await this.authService.validateCustomerByOtp(loginOtpDto.mobile, loginOtpDto.otp);
+
+    if (!user) {
+      this.logger.warn(`Customer OTP login failed for mobile=${loginOtpDto.mobile}`);
+      throw new UnauthorizedException('Invalid mobile number or OTP');
+    }
+
+    const result = await this.authService.login(user);
+    this.logger.log(`Customer OTP login success for mobile=${loginOtpDto.mobile}`);
     return result;
   }
 
