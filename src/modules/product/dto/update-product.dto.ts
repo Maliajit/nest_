@@ -126,6 +126,10 @@ export class UpdateProductDto {
   @IsOptional()
   @IsString()
   metaKeywords?: string;
+  
+  @IsOptional()
+  @IsString()
+  theme?: string;
 
   @IsOptional()
   @IsString()

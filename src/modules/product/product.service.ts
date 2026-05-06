@@ -108,6 +108,7 @@ export class ProductService {
       brandId: data.brandId,
       mainCategoryId: data.mainCategoryId || (dto as any).categoryId,
       taxClassId: data.taxClassId,
+      theme: data.theme,
       subtitle: data.subtitle,
       tagline: data.tagline,
       heritageText: data.heritageText,
@@ -589,7 +590,7 @@ export class ProductService {
         'manageStock', 'qty', 'inStock', 'codAvailable', 'status', 'heroImage',
         'isFeatured', 'isNew', 'isBestseller', 'weight', 'length', 'width', 'height',
         'metaTitle', 'metaDescription', 'metaKeywords', 'brandId', 'mainCategoryId', 'taxClassId',
-        'subtitle', 'tagline', 'heritageText', 'videoUrl', 'bgColor', 'accentColor', 'textColor', 
+        'theme', 'subtitle', 'tagline', 'heritageText', 'videoUrl', 'bgColor', 'accentColor', 'textColor', 
         'gradient', 'mistColor', 'images'
       ];
 

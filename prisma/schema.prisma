@@ -138,7 +138,6 @@ model Customer {
   name                 String
   email                String?                 @unique(map: "customers_email_unique")
   mobile               String?                 @unique(map: "customers_mobile_unique")
-  dob                  DateTime?               @map("dob")
   password             String
   status               Int                     @default(1)
   isBlock              Boolean                 @default(false) @map("is_block")
@@ -154,6 +153,7 @@ model Customer {
   updatedAt            DateTime?               @map("updated_at")
   deletedAt            DateTime?               @map("deleted_at")
   blockedBy            BigInt?                 @map("blocked_by")
+  dob                  DateTime?               @map("dob")
   activityLogs         ActivityLog[]
   auditTrail           AuditTrail[]
   carts                Cart[]
@@ -390,9 +390,9 @@ model Media {
   attributeValues  AttributeValue[] @relation("AttributeValueImage")
   brandLogos       Brand[]          @relation("BrandLogo")
   categoryImages   Category[]       @relation("CategoryImage")
+  productMedia     ProductMedia[]
   reviewImages     ReviewImage[]
   variantImages    VariantImage[]
-  productMedia     ProductMedia[]
 
   @@index([disk], map: "media_disk_index")
   @@index([mimeType], map: "media_mime_type_index")
@@ -471,16 +471,16 @@ model AttributeValue {
 }
 
 model Tag {
-  id          BigInt      @id @default(autoincrement())
-  name        String      
-  slug        String      @unique(map: "tags_slug_unique")
-  isActive    Boolean     @default(true) @map("is_active")
-  isFeatured  Boolean     @default(false) @map("is_featured")
+  id          BigInt       @id @default(autoincrement())
+  name        String
+  slug        String       @unique(map: "tags_slug_unique")
+  isActive    Boolean      @default(true) @map("is_active")
+  isFeatured  Boolean      @default(false) @map("is_featured")
   description String?
-  color       String?     @default("#3b82f6")
-  icon        String?     @default("fas fa-tag")
-  createdAt   DateTime?   @map("created_at")
-  updatedAt   DateTime?   @map("updated_at")
+  color       String?      @default("#3b82f6")
+  icon        String?      @default("fas fa-tag")
+  createdAt   DateTime?    @map("created_at")
+  updatedAt   DateTime?    @map("updated_at")
   productTags ProductTag[]
 
   @@index([isActive], map: "tags_is_active_index")
@@ -493,11 +493,11 @@ model Specification {
   code                  String                 @unique(map: "specifications_code_unique")
   type                  String                 @default("text")
   sortOrder             Int                    @default(0) @map("sort_order")
-  isRequired             Boolean                @default(false) @map("is_required")
-  isFilterable           Boolean                @default(true) @map("is_filterable")
-  isActive               Boolean                @default(true) @map("is_active")
   createdAt             DateTime?              @map("created_at")
   updatedAt             DateTime?              @map("updated_at")
+  isActive              Boolean                @default(true) @map("is_active")
+  isFilterable          Boolean                @default(true) @map("is_filterable")
+  isRequired            Boolean                @default(false) @map("is_required")
   productSpecifications ProductSpecification[]
   groups                SpecGroupSpec[]
   values                SpecificationValue[]
@@ -605,9 +605,6 @@ model CategoryAttribute {
   @@map("category_attributes")
 }
 
-
-
-
 model CategoryHierarchy {
   id           BigInt @id @default(autoincrement())
   ancestorId   BigInt @map("ancestor_id")
@@ -640,21 +637,15 @@ model Product {
   sku                 String                 @unique(map: "products_sku_unique")
   productCode         String?                @map("product_code")
   productType         String                 @default("simple") @map("product_type")
-  
-  // Custom Watch Fields
   subtitle            String?
   tagline             String?
   heroImage           String?                @map("hero_image")
   heritageText        String?                @map("heritage_text")
-  videoUrl            String?                @map("video_url")
-  
-  // Theme Fields
   bgColor             String?                @map("bg_color")
   accentColor         String?                @map("accent_color")
   textColor           String?                @map("text_color")
   gradient            String?                @map("gradient")
   mistColor           String?                @map("mist_color")
-
   description         String?
   shortDescription    String?                @map("short_description")
   price               Decimal                @default(0.00)
@@ -670,13 +661,10 @@ model Product {
   isFeatured          Boolean                @default(false) @map("is_featured")
   isNew               Boolean                @default(false) @map("is_new")
   isBestseller        Boolean                @default(false) @map("is_bestseller")
-  
-  // Dimensions
   weight              Decimal?
   length              Decimal?
   width               Decimal?
   height              Decimal?
-  
   viewed              Int                    @default(0)
   metaTitle           String?                @map("meta_title")
   metaDescription     String?                @map("meta_description")
@@ -685,6 +673,8 @@ model Product {
   createdAt           DateTime?              @map("created_at")
   updatedAt           DateTime?              @map("updated_at")
   deletedAt           DateTime?              @map("deleted_at")
+  videoUrl            String?                @map("video_url")
+  theme               String?                @map("theme")
   cartItems           CartItem[]
   categories          CategoryProduct[]
   crossSellsFrom      CrossSellProduct[]     @relation("ProductCrossSellTargets")
@@ -693,11 +683,11 @@ model Product {
   itemCollectionItems ItemCollectionItem[]
   offerRewards        OfferReward[]          @relation("OfferRewardProduct")
   orderItems          OrderItem[]
+  productMedia        ProductMedia[]
   productReviews      ProductReview[]
   specifications      ProductSpecification[]
   tags                ProductTag[]
   variants            ProductVariant[]
-  productMedia        ProductMedia[]
   brand               Brand?                 @relation(fields: [brandId], references: [id])
   mainCategory        Category?              @relation("ProductMainCategory", fields: [mainCategoryId], references: [id])
   taxClass            TaxClass?              @relation(fields: [taxClassId], references: [id])
@@ -825,7 +815,7 @@ model VariantImage {
   sortOrder Int            @default(0) @map("sort_order")
   createdAt DateTime?      @map("created_at")
   updatedAt DateTime?      @map("updated_at")
-  type      String         @default("GALLERY") @map("type") // GALLERY, HERO, VIDEO
+  type      String         @default("GALLERY") @map("type")
   media     Media          @relation(fields: [mediaId], references: [id], onDelete: Cascade)
   variant   ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
 
@@ -836,15 +826,15 @@ model VariantImage {
 }
 
 model ProductMedia {
-  id        BigInt   @id @default(autoincrement())
-  productId BigInt   @map("product_id")
-  mediaId   BigInt   @map("media_id")
-  type      String   @default("GALLERY") @map("type") // 360, GALLERY, VIDEO
-  sortOrder Int      @default(0) @map("sort_order")
+  id        BigInt    @id @default(autoincrement())
+  productId BigInt    @map("product_id")
+  mediaId   BigInt    @map("media_id")
+  type      String    @default("GALLERY") @map("type")
+  sortOrder Int       @default(0) @map("sort_order")
   createdAt DateTime? @map("created_at")
   updatedAt DateTime? @map("updated_at")
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  media     Media    @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  media     Media     @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  product   Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@index([productId], map: "product_media_product_id_index")
   @@index([mediaId], map: "product_media_media_id_foreign")
@@ -924,27 +914,26 @@ model TaxClass {
 model TaxRate {
   id          BigInt     @id @default(autoincrement())
   name        String
-  code        String?    @map("code")
-  description String?    @map("description")
   countryCode String?    @map("country_code")
   stateCode   String?    @map("state_code")
   zipCode     String?    @map("zip_code")
   rate        Decimal
-  type        String     @default("percentage")
   isActive    Int        @default(1) @map("is_active")
   priority    Int        @default(0)
-  sortOrder   Int        @default(0) @map("sort_order")
-  isCompound  Boolean    @default(false) @map("is_compound")
   createdAt   DateTime?  @map("created_at")
   updatedAt   DateTime?  @map("updated_at")
   deletedAt   DateTime?  @map("deleted_at")
+  code        String?    @map("code")
+  description String?    @map("description")
+  isCompound  Boolean    @default(false) @map("is_compound")
+  sortOrder   Int        @default(0) @map("sort_order")
+  type        String     @default("percentage")
   taxClasses  TaxClass[] @relation("TaxClassToTaxRate")
 
   @@index([isActive], map: "tax_rates_is_active_index")
   @@index([countryCode, stateCode], map: "tax_rates_country_code_state_code_index")
   @@map("tax_rates")
 }
-
 
 model ShippingZone {
   id        BigInt           @id @default(autoincrement())
@@ -1196,11 +1185,11 @@ model State {
 model Wishlist {
   id         BigInt         @id @default(autoincrement())
   customerId BigInt?        @map("customer_id")
-  sessionId  String?        @map("session_id")
   name       String         @default("Default")
   isPublic   Int            @default(0) @map("is_public")
   createdAt  DateTime?      @map("created_at")
   updatedAt  DateTime?      @map("updated_at")
+  sessionId  String?        @map("session_id")
   items      WishlistItem[]
   customer   Customer?      @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
@@ -1483,7 +1472,6 @@ model OrderSequence {
   @@map("order_sequences")
 }
 
-
 model Order {
   id                  BigInt               @id @default(autoincrement())
   customerId          BigInt?              @map("customer_id")
@@ -1499,7 +1487,6 @@ model Order {
   customerFirstName   String               @map("customer_first_name")
   customerLastName    String               @map("customer_last_name")
   customerMobile      String?              @map("customer_mobile")
-  customerDob         DateTime?            @map("customer_dob")
   shippingMethodId    BigInt?              @map("shipping_method_id")
   paymentMethod       String?              @map("payment_method")
   offerId             BigInt?              @map("offer_id")
@@ -1517,6 +1504,7 @@ model Order {
   createdAt           DateTime?            @map("created_at")
   updatedAt           DateTime?            @map("updated_at")
   deletedAt           DateTime?            @map("deleted_at")
+  customerDob         DateTime?            @map("customer_dob")
   offerUsages         OfferUsage[]
   addresses           OrderAddress[]
   items               OrderItem[]
@@ -1811,21 +1799,21 @@ model WishlistItem {
 }
 
 model NotificationTemplate {
-  id           BigInt    @id @default(autoincrement())
-  name         String   
-  code         String    @unique(map: "notification_templates_code_unique")
-  subject      String   
-  content      String   
-  type         String   
-  triggerEvent String?   @map("trigger_event")
-  variables    Json?
-  isActive     Boolean   @default(true) @map("is_active")
-  isFeatured   Boolean   @default(false) @map("is_featured")
-  description  String?
-  color        String?   @default("#3b82f6")
-  icon         String?   @default("fas fa-tag")
-  createdAt    DateTime? @map("created_at")
-  updatedAt    DateTime? @map("updated_at")
+  id            BigInt         @id @default(autoincrement())
+  name          String
+  code          String         @unique(map: "notification_templates_code_unique")
+  subject       String
+  content       String
+  type          String
+  triggerEvent  String?        @map("trigger_event")
+  variables     Json?
+  isActive      Boolean        @default(true) @map("is_active")
+  isFeatured    Boolean        @default(false) @map("is_featured")
+  description   String?
+  color         String?        @default("#3b82f6")
+  icon          String?        @default("fas fa-tag")
+  createdAt     DateTime?      @map("created_at")
+  updatedAt     DateTime?      @map("updated_at")
   notifications Notification[]
 
   @@index([code], map: "notification_templates_code_index")

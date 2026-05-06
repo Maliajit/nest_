@@ -136,6 +136,10 @@ export class CreateProductDto {
 
   @IsOptional()
   @IsString()
+  theme?: string;
+
+  @IsOptional()
+  @IsString()
   subtitle?: string;
 
   @IsOptional()
