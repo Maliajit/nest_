@@ -16,6 +16,7 @@ import { join } from 'path';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  app.setGlobalPrefix('api');
   
   // Serve static uploads
   app.useStaticAssets(join(process.cwd(), 'uploads'), {
