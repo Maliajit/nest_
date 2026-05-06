@@ -159,15 +159,30 @@ async function main() {
       const colVal = colorAttr.values.find(val => val.label === v.color);
       if (colVal) await prisma.variantAttribute.create({ data: { variantId: variant.id, attributeId: colorAttr.id, attributeValueId: colVal.id } });
       
-      if (v.img) {
+           if (v.img) {
+        // 1. Create the Media record separately
+        const media = await prisma.media.create({
+          data: { 
+            fileName: v.img, 
+            originalFilename: v.img, 
+            mimeType: 'image/png', 
+            extension: 'png', 
+            fileSize: 0, 
+            disk: 'public' 
+          }
+        });
+
+        // 2. Now create the VariantImage using the ID from above
         await prisma.variantImage.create({
           data: {
             variantId: variant.id,
-            media: { create: { fileName: v.img, originalFilename: v.img, mimeType: 'image/png', extension: 'png', fileSize: 0, disk: 'public' } },
-            type: 'MAIN', isPrimary: 1
+            mediaId: media.id, 
+            type: 'MAIN', 
+            isPrimary: 1
           }
         });
       }
+
     }
   }
 
