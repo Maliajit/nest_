@@ -55,11 +55,25 @@ export class CustomerService {
 
   private buildOrderPreview(order: any) {
     const firstItem = order.items?.[0];
-    const firstImage = firstItem?.productVariant?.variantImages?.[0]?.media?.filePath || null;
+    const variant = firstItem?.productVariant;
+    const product = variant?.product;
+
+    // 1. Try Variant Image
+    let rawImg = variant?.variantImages?.find(vi => vi.type === 'MAIN')?.media?.filePath 
+               || variant?.variantImages?.[0]?.media?.filePath;
+
+    // 2. Try Product Gallery
+    if (!rawImg && product?.images) {
+      const prodImages = Array.isArray(product.images) ? product.images : (typeof product.images === 'string' ? JSON.parse(product.images) : []);
+      if (prodImages.length > 0) rawImg = prodImages[0];
+    }
+
+    // 3. Try Hero Image
+    if (!rawImg) rawImg = product?.heroImage;
 
     return {
       title: firstItem?.productName || 'Product',
-      image: this.toMediaUrl(firstImage),
+      image: this.toMediaUrl(rawImg),
     };
   }
 
@@ -155,6 +169,7 @@ export class CustomerService {
             include: {
               productVariant: {
                 include: {
+                  product: true,
                   variantImages: {
                     include: {
                       media: true,
