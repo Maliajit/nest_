@@ -139,7 +139,7 @@ async function main() {
   for (const p of products) {
     const created = await prisma.product.create({
       data: {
-        name: p.name, slug: p.slug, sku: p.sku, productType: 'configurable', status: 'active',
+        name: p.name, slug: p.slug, sku: p.sku, productType: 'configurable', status: 'active', isFeatured: true,
         theme: p.theme, bgColor: p.bgColor, heroImage: p.heroImage,
         mainCategoryId: category.id, brandId: brand.id,
         price: 25000, sellingPrice: 25000, qty: 100,
