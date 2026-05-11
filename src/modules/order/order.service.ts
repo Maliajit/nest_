@@ -16,7 +16,7 @@ export class OrderService {
     private loyaltyService: LoyaltyService,
     private historyService: OrderStatusHistoryService,
     private shiprocketService: ShiprocketService,
-  ) {}
+  ) { }
 
   // Create order from cart (Checkout)
   async checkout(customerId: string, dto: CheckoutDto) {
@@ -27,11 +27,11 @@ export class OrderService {
     // 1. Get active cart
     const cart = await this.prisma.cart.findFirst({
       where: cId ? { customerId: cId, status: 'active' } : { sessionId: customerIdStr, status: 'active' },
-      include: { 
-        items: { 
-          include: { 
-            productVariant: { include: { product: true } } 
-          } 
+      include: {
+        items: {
+          include: {
+            productVariant: { include: { product: true } }
+          }
         },
         customer: true,
         offer: true,
@@ -45,17 +45,17 @@ export class OrderService {
     // 2. Validate Coupon
     let appliedOffer = cart.offer;
     if (dto.couponCode) {
-        appliedOffer = await this.marketingService.validateCoupon(customerId, dto.couponCode, Number(cart.subtotal));
+      appliedOffer = await this.marketingService.validateCoupon(customerId, dto.couponCode, Number(cart.subtotal));
     }
 
     // 3. Handle Loyalty Points Redemption
     let pointDiscount = 0;
     if (dto.redeemPoints && dto.redeemPoints > 0) {
-        const balance = await this.loyaltyService.getLoyaltyBalance(customerId);
-        if (Number(balance.availablePoints) < dto.redeemPoints) {
-            throw new BadRequestException('Insufficient loyalty points');
-        }
-        pointDiscount = dto.redeemPoints / 100;
+      const balance = await this.loyaltyService.getLoyaltyBalance(customerId);
+      if (Number(balance.availablePoints) < dto.redeemPoints) {
+        throw new BadRequestException('Insufficient loyalty points');
+      }
+      pointDiscount = dto.redeemPoints / 100;
     }
 
     // 4. Validate Addresses
@@ -78,44 +78,44 @@ export class OrderService {
       // Calculate Total Weight (Default to 0.5kg per watch if not specified)
       let totalWeight = 0;
       for (const item of cart.items) {
-          const itemWeight = item.productVariant.weight ? Number(item.productVariant.weight) : 0.4;
-          totalWeight += itemWeight * item.quantity;
+        const itemWeight = item.productVariant.weight ? Number(item.productVariant.weight) : 0.4;
+        totalWeight += itemWeight * item.quantity;
       }
 
       const isCod = dto.paymentMethod === 'cod';
       let shippingTotal = 500; // Default fallback
 
       try {
-          const pickupPincode = process.env.SHIPROCKET_PICKUP_PINCODE || '380001';
-          const rateData = await this.shiprocketService.checkServiceability(
-              pickupPincode,
-              shippingAddr.pincode,
-              totalWeight
-          );
+        const pickupPincode = process.env.SHIPROCKET_PICKUP_PINCODE || '380001';
+        const rateData = await this.shiprocketService.checkServiceability(
+          pickupPincode,
+          shippingAddr.pincode,
+          totalWeight
+        );
 
-          if (rateData.serviceable === false) {
-              this.logger.warn(`Unserviceable pincode: ${shippingAddr.pincode} for customer ${customerId}`);
-              throw new BadRequestException('Delivery is not available for this location');
-          }
+        if (rateData.serviceable === false) {
+          this.logger.warn(`Unserviceable pincode: ${shippingAddr.pincode} for customer ${customerId}`);
+          throw new BadRequestException('Delivery is not available for this location');
+        }
 
-          if (isCod && rateData.codAvailable === false) {
-              this.logger.warn(`COD Unavailable for pincode: ${shippingAddr.pincode} for customer ${customerId}`);
-              throw new BadRequestException('Cash on Delivery is not available for this location');
-          }
+        if (isCod && rateData.codAvailable === false) {
+          this.logger.warn(`COD Unavailable for pincode: ${shippingAddr.pincode} for customer ${customerId}`);
+          throw new BadRequestException('Cash on Delivery is not available for this location');
+        }
 
-          if (rateData.serviceable === null) {
-              this.logger.error(`Technical failure in shipping API for pincode: ${shippingAddr.pincode}`);
-          }
+        if (rateData.serviceable === null) {
+          this.logger.error(`Technical failure in shipping API for pincode: ${shippingAddr.pincode}`);
+        }
 
-          shippingTotal = rateData.rate ?? 500;
+        shippingTotal = rateData.rate ?? 500;
       } catch (e) {
-          if (e instanceof BadRequestException) throw e;
-          this.logger.error(`Shiprocket rate calculation failed: ${e.message}`);
-          shippingTotal = 500;
+        if (e instanceof BadRequestException) throw e;
+        this.logger.error(`Shiprocket rate calculation failed: ${e.message}`);
+        shippingTotal = 500;
       }
 
       const isOnline = dto.paymentMethod === 'online';
-      
+
       const order = await tx.order.create({
         data: {
           customer: { connect: { id: cId } },
@@ -211,44 +211,44 @@ export class OrderService {
 
       // e. Track Marketing Usage
       if (appliedOffer && cId) {
-          await tx.offerUsage.create({
-              data: {
-                  offerId: appliedOffer.id,
-                  customerId: cId,
-                  orderId: order.id,
-                  discountAmount: new Prisma.Decimal(discountAmount),
-              }
-          });
-          await tx.offer.update({
-              where: { id: appliedOffer.id },
-              data: { usedCount: { increment: 1 } }
-          });
+        await tx.offerUsage.create({
+          data: {
+            offerId: appliedOffer.id,
+            customerId: cId,
+            orderId: order.id,
+            discountAmount: new Prisma.Decimal(discountAmount),
+          }
+        });
+        await tx.offer.update({
+          where: { id: appliedOffer.id },
+          data: { usedCount: { increment: 1 } }
+        });
       }
 
       // f. Spend Points
       if (dto.redeemPoints && dto.redeemPoints > 0 && cId) {
-          const loyalty = await tx.customerLoyalty.findFirst({ where: { customerId: cId } });
-          if (loyalty) {
-              await tx.loyaltyTransaction.create({
-                  data: {
-                      customerLoyaltyId: loyalty.id,
-                      customerId: cId,
-                      type: 'redemption',
-                      points: -dto.redeemPoints,
-                      balance: Number(loyalty.availablePoints) - dto.redeemPoints,
-                      referenceType: 'order',
-                      referenceId: order.id,
-                      notes: 'Spend on checkout',
-                  }
-              });
-              await tx.customerLoyalty.update({
-                  where: { id: loyalty.id },
-                  data: {
-                      availablePoints: { decrement: dto.redeemPoints },
-                      usedPoints: { increment: dto.redeemPoints },
-                  }
-              });
-          }
+        const loyalty = await tx.customerLoyalty.findFirst({ where: { customerId: cId } });
+        if (loyalty) {
+          await tx.loyaltyTransaction.create({
+            data: {
+              customerLoyaltyId: loyalty.id,
+              customerId: cId,
+              type: 'redemption',
+              points: -dto.redeemPoints,
+              balance: Number(loyalty.availablePoints) - dto.redeemPoints,
+              referenceType: 'order',
+              referenceId: order.id,
+              notes: 'Spend on checkout',
+            }
+          });
+          await tx.customerLoyalty.update({
+            where: { id: loyalty.id },
+            data: {
+              availablePoints: { decrement: dto.redeemPoints },
+              usedPoints: { increment: dto.redeemPoints },
+            }
+          });
+        }
       }
 
       // g. Clear Cart
@@ -265,7 +265,7 @@ export class OrderService {
 
       return tx.order.findUnique({
         where: { id: order.id },
-        include: { 
+        include: {
           items: {
             include: {
               product: true,
@@ -319,58 +319,58 @@ export class OrderService {
     const cId = BigInt(customerId);
     const oId = BigInt(orderId);
 
-    const order = await this.prisma.order.findUnique({ 
-        where: { id: oId },
-        include: { customer: true }
+    const order = await this.prisma.order.findUnique({
+      where: { id: oId },
+      include: { customer: true }
     });
 
     if (!order || order.customerId !== cId) throw new NotFoundException('Order not found');
     if (!['pending', 'confirmed'].includes(order.status)) {
-        throw new BadRequestException('Order cannot be cancelled in its current state');
+      throw new BadRequestException('Order cannot be cancelled in its current state');
     }
 
     return this.prisma.$transaction(async (tx) => {
-        const updatedOrder = await tx.order.update({
-            where: { id: oId },
-            data: { 
-                status: 'cancelled',
-                cancellationReason: reason,
-                cancelledAt: new Date(),
-            }
-        });
-
-        await tx.orderStatusHistory.create({
-            data: { orderId: oId, status: 'cancelled', notes: `Cancelled by customer: ${reason}` },
-        });
-
-        // Refund Loyalty Points if used
-        if (order.loyaltyPointsUsed && order.loyaltyPointsUsed.toNumber() > 0) {
-            const points = order.loyaltyPointsUsed.toNumber();
-            const loyalty = await tx.customerLoyalty.findFirst({ where: { customerId: cId } });
-            if (loyalty) {
-                await tx.loyaltyTransaction.create({
-                    data: {
-                        customerLoyaltyId: loyalty.id,
-                        customerId: cId,
-                        type: 'refund',
-                        points: points,
-                        balance: Number(loyalty.availablePoints) + points,
-                        referenceType: 'order',
-                        referenceId: oId,
-                        notes: 'Points refunded due to cancellation',
-                    }
-                });
-                await tx.customerLoyalty.update({
-                    where: { id: loyalty.id },
-                    data: {
-                        availablePoints: { increment: points },
-                        usedPoints: { decrement: points },
-                    }
-                });
-            }
+      const updatedOrder = await tx.order.update({
+        where: { id: oId },
+        data: {
+          status: 'cancelled',
+          cancellationReason: reason,
+          cancelledAt: new Date(),
         }
+      });
 
-        return updatedOrder;
+      await tx.orderStatusHistory.create({
+        data: { orderId: oId, status: 'cancelled', notes: `Cancelled by customer: ${reason}` },
+      });
+
+      // Refund Loyalty Points if used
+      if (order.loyaltyPointsUsed && order.loyaltyPointsUsed.toNumber() > 0) {
+        const points = order.loyaltyPointsUsed.toNumber();
+        const loyalty = await tx.customerLoyalty.findFirst({ where: { customerId: cId } });
+        if (loyalty) {
+          await tx.loyaltyTransaction.create({
+            data: {
+              customerLoyaltyId: loyalty.id,
+              customerId: cId,
+              type: 'refund',
+              points: points,
+              balance: Number(loyalty.availablePoints) + points,
+              referenceType: 'order',
+              referenceId: oId,
+              notes: 'Points refunded due to cancellation',
+            }
+          });
+          await tx.customerLoyalty.update({
+            where: { id: loyalty.id },
+            data: {
+              availablePoints: { increment: points },
+              usedPoints: { decrement: points },
+            }
+          });
+        }
+      }
+
+      return updatedOrder;
     });
   }
 
@@ -379,14 +379,14 @@ export class OrderService {
   async getAllOrders() {
     const orders = await this.prisma.order.findMany({
       orderBy: { createdAt: 'desc' },
-      include: { 
+      include: {
         items: {
           include: {
             product: true
           }
         },
         customer: {
-            select: { name: true, email: true }
+          select: { name: true, email: true }
         }
       },
     });
@@ -398,7 +398,7 @@ export class OrderService {
     const orders = await this.prisma.order.findMany({
       where: { customerId: BigInt(customerId) },
       orderBy: { createdAt: 'desc' },
-      include: { 
+      include: {
         items: {
           include: {
             product: true,
@@ -430,7 +430,7 @@ export class OrderService {
   async getOrderById(customerId: string, orderId: string) {
     const order = await this.prisma.order.findUnique({
       where: { id: BigInt(orderId) },
-      include: { 
+      include: {
         items: {
           include: {
             product: true,
@@ -453,9 +453,9 @@ export class OrderService {
               }
             }
           }
-        }, 
-        addresses: true, 
-        statusHistory: { orderBy: { createdAt: 'desc' } } 
+        },
+        addresses: true,
+        statusHistory: { orderBy: { createdAt: 'desc' } }
       },
     });
     if (!order || order.customerId !== BigInt(customerId)) {
@@ -465,51 +465,66 @@ export class OrderService {
   }
 
   async calculateOrderTotal(customerId: string, pincode?: string) {
-    const cId = BigInt(customerId);
+    const customerIdStr = customerId?.toString() || '';
+    const isNumeric = !isNaN(Number(customerIdStr)) && !customerIdStr.includes('usr_') && customerIdStr !== '';
+    const cId = isNumeric ? BigInt(customerIdStr) : null;
+
     const cart = await this.prisma.cart.findFirst({
-        where: { customerId: cId, status: 'active' },
-        include: { items: { include: { productVariant: true } } }
+      where: cId ? { customerId: cId, status: 'active' } : { sessionId: customerIdStr, status: 'active' },
+      include: { items: { include: { productVariant: true } } }
     });
 
     if (!cart || cart.items.length === 0) {
-        return { subtotal: 0, shipping: 0, tax: 0, total: 0 };
+      return { subtotal: 0, shipping: 0, tax: 0, total: 0 };
     }
 
-    const subtotal = Number(cart.subtotal);
+    const subtotal = cart.subtotal ? Number(cart.subtotal) : 0;
     let shippingTotal = 0;
+    let message = '';
 
-    if (pincode) {
+    if (pincode && pincode.length === 6) {
+      try {
         const rateData = await this.calculateShipping(customerId, pincode);
         shippingTotal = rateData.rate ?? 500;
+        message = rateData.message || '';
+      } catch (e) {
+        this.logger.error(`Error calculating shipping in total: ${e.message}`);
+        shippingTotal = 500;
+      }
     }
 
     return {
-        subtotal,
-        shipping: shippingTotal,
-        tax: 0,
-        total: subtotal + shippingTotal
+      subtotal,
+      shipping: shippingTotal,
+      tax: 0,
+      total: subtotal + shippingTotal,
+      message
     };
   }
 
   async calculateShipping(customerId: string, pincode: string) {
-    const cId = BigInt(customerId);
+    const customerIdStr = customerId?.toString() || '';
+    const isNumeric = !isNaN(Number(customerIdStr)) && !isNaN(Number(customerIdStr)) && !customerIdStr.includes('usr_') && customerIdStr !== '';
+    const cId = isNumeric ? BigInt(customerIdStr) : null;
+
     const cart = await this.prisma.cart.findFirst({
-        where: { customerId: cId, status: 'active' },
-        include: { items: { include: { productVariant: true } } }
+      where: cId ? { customerId: cId, status: 'active' } : { sessionId: customerIdStr, status: 'active' },
+      include: { items: { include: { productVariant: true } } }
     });
+
     if (!cart || cart.items.length === 0) return { serviceable: false, rate: null, message: "Cart is empty" };
 
     let totalWeight = 0;
     for (const item of cart.items) {
-        const itemWeight = item.productVariant.weight ? Number(item.productVariant.weight) : 0.4;
-        totalWeight += itemWeight * item.quantity;
+      const itemWeight = item.productVariant.weight ? Number(item.productVariant.weight) : 0.4;
+      totalWeight += itemWeight * item.quantity;
     }
 
     const pickupPincode = process.env.SHIPROCKET_PICKUP_PINCODE || '380001';
     const rateData = await this.shiprocketService.checkServiceability(
-        pickupPincode,
-        pincode,
-        totalWeight
+      pickupPincode,
+      pincode,
+      totalWeight
     );
 
     return rateData;

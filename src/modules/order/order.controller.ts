@@ -3,7 +3,7 @@ import { OrderService } from './order.service';
 
 @Controller('orders')
 export class OrderController {
-  constructor(private readonly orderService: OrderService) {}
+  constructor(private readonly orderService: OrderService) { }
 
   @Post()
   async createOrder(@Body('customerId') customerId: string, @Body() createOrderDto: any) {
