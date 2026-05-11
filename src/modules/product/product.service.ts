@@ -118,6 +118,7 @@ export class ProductService {
       gradient: data.gradient,
       mistColor: data.mistColor,
       videoUrl: data.videoUrl,
+      discoverHeroBgImage: data.discoverHeroBgImage,
     };
 
       return await this.prisma.$transaction(async (tx) => {
@@ -591,7 +592,7 @@ export class ProductService {
         'isFeatured', 'isNew', 'isBestseller', 'weight', 'length', 'width', 'height',
         'metaTitle', 'metaDescription', 'metaKeywords', 'brandId', 'mainCategoryId', 'taxClassId',
         'theme', 'subtitle', 'tagline', 'heritageText', 'videoUrl', 'bgColor', 'accentColor', 'textColor', 
-        'gradient', 'mistColor', 'images'
+        'gradient', 'mistColor', 'images', 'discoverHeroBgImage'
       ];
 
       const filteredPrismaData: any = {};

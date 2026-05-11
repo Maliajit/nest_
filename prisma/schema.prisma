@@ -675,6 +675,7 @@ model Product {
   deletedAt           DateTime?              @map("deleted_at")
   videoUrl            String?                @map("video_url")
   theme               String?                @map("theme")
+  discoverHeroBgImage String?                @map("discover_hero_bg_image")
   cartItems           CartItem[]
   categories          CategoryProduct[]
   crossSellsFrom      CrossSellProduct[]     @relation("ProductCrossSellTargets")

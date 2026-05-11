@@ -175,6 +175,10 @@ export class CreateProductDto {
   videoUrl?: string;
 
   @IsOptional()
+  @IsString()
+  discoverHeroBgImage?: string;
+
+  @IsOptional()
   images?: string[];
 
   @IsOptional()

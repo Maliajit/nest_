@@ -168,6 +168,10 @@ export class UpdateProductDto {
   videoUrl?: string;
 
   @IsOptional()
+  @IsString()
+  discoverHeroBgImage?: string;
+
+  @IsOptional()
   images?: string[];
 
   @IsOptional()
