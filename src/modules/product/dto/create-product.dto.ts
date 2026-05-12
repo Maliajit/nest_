@@ -93,8 +93,7 @@ export class CreateProductDto {
   @IsBoolean()
   isBestseller?: boolean;
 
-  @IsOptional()
-  brandId?: number | string;
+
 
   @IsOptional()
   mainCategoryId?: number | string;

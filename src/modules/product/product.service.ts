@@ -35,7 +35,7 @@ export class ProductService {
         case 'P2025':
           throw new NotFoundException(`${context} target record not found.`);
         case 'P2003':
-          throw new BadRequestException(`Foreign key constraint failed. One of the referenced IDs (brand, category, etc.) does not exist.`);
+          throw new BadRequestException(`Foreign key constraint failed. One of the referenced IDs (category, etc.) does not exist.`);
         default:
           throw new BadRequestException(`Database Error (${error.code}): ${error.message}`);
       }
@@ -49,7 +49,7 @@ export class ProductService {
   }
 
   async createProduct(dto: CreateProductDto, imageFiles?: Array<Express.Multer.File>) {
-    const { brandId, mainCategoryId, taxClassId, ...rest } = dto;
+    const { mainCategoryId, taxClassId, ...rest } = dto;
     
     try {
       // Convert IDs to BigInt and decimals to string for Prisma
@@ -57,7 +57,7 @@ export class ProductService {
         ...rest,
         price: rest.price ? rest.price.toString() : '0',
         sellingPrice: rest.price ? rest.price.toString() : '0',
-        brandId: this.safeBigInt(brandId, 'brandId'),
+
         mainCategoryId: this.safeBigInt(mainCategoryId, 'mainCategoryId'),
         taxClassId: this.safeBigInt(taxClassId, 'taxClassId'),
       };
@@ -105,7 +105,7 @@ export class ProductService {
       metaDescription: data.metaDescription,
       metaKeywords: data.metaKeywords,
       images: data.images || (dto as any).gallery?.map(g => g.url) || [],
-      brandId: data.brandId,
+
       mainCategoryId: data.mainCategoryId || (dto as any).categoryId,
       taxClassId: data.taxClassId,
       theme: data.theme,
@@ -248,7 +248,6 @@ export class ProductService {
       const {
         search,
         categoryId,
-        brandId,
         minPrice,
         maxPrice,
         sort,
@@ -275,9 +274,7 @@ export class ProductService {
       where.mainCategoryId = BigInt(categoryId);
     }
 
-    if (brandId) {
-      where.brandId = BigInt(brandId);
-    }
+
 
     if (minPrice !== undefined || maxPrice !== undefined) {
       where.sellingPrice = {};
@@ -316,7 +313,7 @@ export class ProductService {
         skip,
         take: limit,
         include: {
-          brand: true,
+
           mainCategory: true,
           taxClass: true,
           variants: {
@@ -409,7 +406,7 @@ export class ProductService {
       take: 10,
       orderBy: { createdAt: 'desc' },
       include: {
-        brand: true,
+
         mainCategory: true,
         variants: {
           include: {
@@ -453,7 +450,7 @@ export class ProductService {
     const product = await this.prisma.product.findUnique({
       where: isId ? { id: BigInt(idOrSlug) } : { slug: idOrSlug },
       include: {
-        brand: true,
+
         mainCategory: true,
         taxClass: true,
         variants: {
@@ -538,23 +535,12 @@ export class ProductService {
     return this.getAllProducts({ ...filters, categoryId: category.id.toString() });
   }
 
-  async getProductsByBrand(brandSlug: string, filters: any = {}) {
-    const brand = await this.prisma.brand.findUnique({
-      where: { slug: brandSlug },
-    });
 
-    if (!brand) {
-      throw new NotFoundException(`Brand ${brandSlug} not found.`);
-    }
-
-    return this.getAllProducts({ ...filters, brandId: brand.id.toString() });
-  }
 
   async updateProduct(id: string | number, dto: UpdateProductDto, imageFiles?: Array<Express.Multer.File>) {
     try {
       const productId = this.safeBigInt(id, 'productId', true) as bigint;
       const { 
-        brandId, 
         mainCategoryId, 
         isActive, 
         categoryId,
@@ -576,7 +562,7 @@ export class ProductService {
       if (rest.price !== undefined) prismaData.price = rest.price.toString();
       if (rest.specialPrice !== undefined) prismaData.specialPrice = rest.specialPrice ? rest.specialPrice.toString() : null;
       
-      if (brandId !== undefined) prismaData.brandId = this.safeBigInt(brandId, 'brandId');
+
       if (taxClassId !== undefined) prismaData.taxClassId = this.safeBigInt(taxClassId, 'taxClassId');
       if (mainCategoryId !== undefined || categoryId !== undefined) {
         const catId = mainCategoryId || categoryId;
@@ -601,7 +587,7 @@ export class ProductService {
         'price', 'sellingPrice', 'specialPrice', 'specialPriceStart', 'specialPriceEnd',
         'manageStock', 'qty', 'inStock', 'codAvailable', 'status', 'heroImage',
         'isFeatured', 'isNew', 'isBestseller', 'weight', 'length', 'width', 'height',
-        'metaTitle', 'metaDescription', 'metaKeywords', 'brandId', 'mainCategoryId', 'taxClassId',
+        'metaTitle', 'metaDescription', 'metaKeywords', 'mainCategoryId', 'taxClassId',
         'theme', 'subtitle', 'tagline', 'heritageText', 'videoUrl', 'bgColor', 'accentColor', 'textColor', 
         'gradient', 'mistColor', 'images', 'discoverHeroBgImage'
       ];

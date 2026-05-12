@@ -5,7 +5,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { ProductModule } from './modules/product/product.module';
 import { CategoryModule } from './modules/category/category.module';
-import { BrandModule } from './modules/brand/brand.module';
+
 import { OrderModule } from './modules/order/order.module';
 import { MarketingModule } from './modules/marketing/marketing.module';
 import { CmsModule } from './modules/cms/cms.module';
@@ -30,7 +30,7 @@ import { SpecificationModule } from './modules/product/specification/specificati
     AttributeModule,
     SpecificationModule,
     CategoryModule,
-    BrandModule,
+
     OrderModule,
     MarketingModule,
     CmsModule,

@@ -89,8 +89,7 @@ export class UpdateProductDto {
   @IsBoolean()
   isBestseller?: boolean;
 
-  @IsOptional()
-  brandId?: number | string;
+
 
   @IsOptional()
   mainCategoryId?: number | string;

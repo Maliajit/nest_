@@ -65,13 +65,7 @@ export class ProductController {
     return this.productService.getProductsByCategory(slug, filters);
   }
 
-  @Get('by-brand/:slug')
-  async findByBrand(
-    @Param('slug') slug: string,
-    @Query() filters: ProductFilterDto,
-  ) {
-    return this.productService.getProductsByBrand(slug, filters);
-  }
+
 
   @Put(':id')
   @UseInterceptors(FilesInterceptor('images', 20, {
