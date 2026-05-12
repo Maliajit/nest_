@@ -188,6 +188,13 @@ export class CreateProductDto {
   heroImage?: string;
 
   @IsOptional()
+  heroImageId?: number | string | bigint;
+
+  @IsOptional()
+  @IsArray()
+  galleryIds?: any[];
+
+  @IsOptional()
   @IsBoolean()
   isActive?: boolean;
 

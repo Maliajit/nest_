@@ -142,6 +142,26 @@ export class ProductService {
           }
         }
 
+        // 1.5 Handle Product Default Media
+        const productMediaMap = new Map<bigint, any>();
+        if (data.heroImageId) {
+          const mid = this.safeBigInt(data.heroImageId, 'heroImageId');
+          if (mid) {
+            productMediaMap.set(mid, { productId, mediaId: mid, type: 'MAIN', sortOrder: 0 });
+          }
+        }
+        if (data.galleryIds && Array.isArray(data.galleryIds)) {
+          data.galleryIds.forEach((mid: any, idx: number) => {
+            const id = this.safeBigInt(mid, 'mediaId');
+            if (id && !productMediaMap.has(id)) {
+              productMediaMap.set(id, { productId, mediaId: id, type: 'GALLERY', sortOrder: productMediaMap.size });
+            }
+          });
+        }
+        if (productMediaMap.size > 0) {
+          await tx.productMedia.createMany({ data: Array.from(productMediaMap.values()) });
+        }
+
         // 2. Handle Specifications
         if (dto.specifications && dto.specifications.length > 0) {
           const specData = dto.specifications
@@ -636,6 +656,65 @@ export class ProductService {
 
             if (tagData.length > 0) {
               await tx.productTag.createMany({ data: tagData as any });
+            }
+          }
+        }
+
+        // 3.5 Update Product Default Media (Diffing Logic)
+        const heroImageId = (dto as any).heroImageId;
+        const galleryIds = (dto as any).galleryIds;
+
+        if (heroImageId !== undefined || galleryIds !== undefined) {
+          const incomingMedia: { mediaId: bigint, type: string, sortOrder: number }[] = [];
+          
+          if (heroImageId) {
+            const bmid = this.safeBigInt(heroImageId, 'heroImageId');
+            if (bmid) {
+              incomingMedia.push({ mediaId: bmid, type: 'MAIN', sortOrder: 0 });
+            }
+          }
+          
+          if (galleryIds && Array.isArray(galleryIds)) {
+            galleryIds.forEach((mid: any) => {
+              const bmid = this.safeBigInt(mid, 'mediaId');
+              if (bmid) {
+                // Avoid duplication if already MAIN
+                if (!incomingMedia.find(m => m.mediaId === bmid)) {
+                  incomingMedia.push({ mediaId: bmid, type: 'GALLERY', sortOrder: incomingMedia.length });
+                }
+              }
+            });
+          }
+
+          const existingMedia = await tx.productMedia.findMany({ where: { productId } });
+          const existingMap = new Map(existingMedia.map(m => [`${m.mediaId}-${m.type}`, m]));
+          
+          const toDelete = existingMedia.filter(em => !incomingMedia.some(im => im.mediaId === em.mediaId && im.type === em.type));
+          const toCreate = incomingMedia.filter(im => !existingMedia.some(em => em.mediaId === im.mediaId && em.type === im.type));
+          const toUpdate = incomingMedia.filter(im => {
+            const em = existingMap.get(`${im.mediaId}-${im.type}`);
+            return em && em.sortOrder !== im.sortOrder;
+          });
+
+          if (toDelete.length > 0) {
+            await tx.productMedia.deleteMany({
+              where: { id: { in: toDelete.map(m => m.id) } }
+            });
+          }
+
+          if (toCreate.length > 0) {
+            await tx.productMedia.createMany({
+              data: toCreate.map(im => ({ ...im, productId }))
+            });
+          }
+
+          for (const up of toUpdate) {
+            const em = existingMap.get(`${up.mediaId}-${up.type}`);
+            if (em) {
+              await tx.productMedia.update({
+                where: { id: em.id },
+                data: { sortOrder: up.sortOrder }
+              });
             }
           }
         }

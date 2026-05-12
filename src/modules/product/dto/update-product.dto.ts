@@ -178,6 +178,13 @@ export class UpdateProductDto {
   heroImage?: string;
 
   @IsOptional()
+  heroImageId?: number | string | bigint;
+
+  @IsOptional()
+  @IsArray()
+  galleryIds?: any[];
+
+  @IsOptional()
   @IsBoolean()
   isActive?: boolean;
 
