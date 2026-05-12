@@ -19,7 +19,7 @@ export class OrderController {
   }
 
   @Get(':id')
-  async getOrderById(@Body('customerId') customerId: string, @Param('id') id: string) {
+  async getOrderById(@Query('customerId') customerId: string, @Param('id') id: string) {
     return this.orderService.getOrderById(customerId, id);
   }
 

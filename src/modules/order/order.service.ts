@@ -428,8 +428,9 @@ export class OrderService {
   }
 
   async getOrderById(customerId: string, orderId: string) {
+    const oId = BigInt(orderId);
     const order = await this.prisma.order.findUnique({
-      where: { id: BigInt(orderId) },
+      where: { id: oId },
       include: {
         items: {
           include: {
@@ -455,12 +456,26 @@ export class OrderService {
           }
         },
         addresses: true,
+        customer: { select: { id: true, name: true, email: true, mobile: true } },
         statusHistory: { orderBy: { createdAt: 'desc' } }
       },
     });
-    if (!order || order.customerId !== BigInt(customerId)) {
+
+    if (!order) {
       throw new NotFoundException('Order not found');
     }
+
+    // Security check: If customerId is provided, verify ownership
+    if (customerId) {
+      const customerIdStr = customerId.toString();
+      const isNumeric = !isNaN(Number(customerIdStr)) && !customerIdStr.includes('usr_') && customerIdStr !== '';
+      const cId = isNumeric ? BigInt(customerIdStr) : null;
+
+      if (cId && order.customerId !== cId) {
+        throw new NotFoundException('Order not found');
+      }
+    }
+
     return { success: true, data: order };
   }
 
