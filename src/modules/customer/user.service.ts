@@ -9,6 +9,10 @@ export class UserService {
     return this.customerService.getAllUsers();
   }
 
+  async findOne(id: string) {
+    return this.customerService.getProfile(id);
+  }
+
   async create(createUserDto: any) {
     // Basic implementation to satisfy the controller
     return { success: true, message: 'User creation not fully implemented', data: createUserDto };

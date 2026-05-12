@@ -77,6 +77,14 @@ export class AuthService {
       role: user.role as AuthRole,
     };
 
+    // Update last login if it's a customer
+    if (user.role === 'customer') {
+      await this.prisma.customer.update({
+        where: { id: BigInt(user.id) },
+        data: { lastLoginAt: new Date() },
+      }).catch(err => console.error('Failed to update last login:', err));
+    }
+
     return {
       access_token: this.jwtService.sign(payload),
       user,

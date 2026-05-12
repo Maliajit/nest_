@@ -338,9 +338,12 @@ export class CustomerService {
       where: { id: cId },
       include: {
         _count: { select: { orders: true } },
+        addresses: true,
         orders: {
-          where: { paymentStatus: 'paid' },
-          select: { grandTotal: true },
+          include: {
+            addresses: true,
+          },
+          orderBy: { createdAt: 'desc' }
         },
       },
     });
@@ -349,10 +352,23 @@ export class CustomerService {
       throw new NotFoundException('Customer not found');
     }
 
-    const totalSpent = customer.orders.reduce((sum, order) => sum + Number(order.grandTotal), 0);
+    const totalSpent = customer.orders
+      .filter(o => o.paymentStatus === 'paid')
+      .reduce((sum, order) => sum + Number(order.grandTotal), 0);
 
-    const { password: _, orders: __, ...result } = customer;
-    return { ...result, totalSpent };
+    const { password: _, ...result } = customer;
+    return { 
+      ...result, 
+      totalSpent,
+      id: result.id.toString(),
+      addresses: (result as any).addresses?.map(a => ({ ...a, id: a.id.toString(), orderId: a.orderId?.toString(), customerId: a.customerId?.toString() })),
+      orders: (result as any).orders?.map(o => ({ 
+        ...o, 
+        id: o.id.toString(), 
+        customerId: o.customerId?.toString(),
+        addresses: o.addresses?.map(a => ({ ...a, id: a.id.toString(), orderId: a.orderId?.toString() }))
+      }))
+    };
   }
 
   async updateProfile(customerId: string, data: UpdateProfileDto) {
