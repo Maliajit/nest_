@@ -358,8 +358,19 @@ export class ProductService {
             }
           },
           orderItems: {
-            select: {
-              quantity: true
+            include: {
+              productVariant: {
+                include: {
+                  variantImages: {
+                    include: {
+                      media: true
+                    }
+                  }
+                }
+              }
+            },
+            orderBy: {
+              createdAt: 'desc'
             }
           },
           productMedia: {
