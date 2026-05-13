@@ -97,9 +97,9 @@ export class ProductController {
     @Body() body: { selections: any[] }
   ) {
     const product = await this.productService.getProductById(id);
-    const selections = body.selections.map(s => ({
+    const selections = (body.selections || []).map(s => ({
       attributeId: BigInt(s.attributeId),
-      valueIds: s.valueIds.map(vId => BigInt(vId))
+      valueIds: (s.valueIds || s.attributeValueIds || []).map(vId => BigInt(vId))
     }));
     
     return this.variantGenerator.generateVariants(
