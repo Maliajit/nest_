@@ -219,6 +219,19 @@ export class ProductService {
               }
             }
 
+            // 1.5 Handle Background Image (Type: HERO_BG)
+            if (variant.heroBgImageId) {
+              const mid = this.safeBigInt(variant.heroBgImageId, 'heroBgImageId', true);
+              if (mid && !mediaMap.has(mid)) {
+                mediaMap.set(mid, {
+                  variantId: v.id,
+                  mediaId: mid,
+                  type: 'HERO_BG',
+                  sortOrder: 0
+                });
+              }
+            }
+
             // 2. Handle Gallery IDs
             if (variant.galleryIds && Array.isArray(variant.galleryIds)) {
               variant.galleryIds.forEach((mid: any) => {
@@ -782,6 +795,19 @@ export class ProductService {
                   variantId: v.id,
                   mediaId: mid,
                   type: 'MAIN',
+                  sortOrder: 0
+                });
+              }
+            }
+
+            // 1.5 Handle Background Image (Type: HERO_BG)
+            if (variant.heroBgImageId) {
+              const mid = this.safeBigInt(variant.heroBgImageId, 'heroBgImageId', true);
+              if (mid && !mediaMap.has(mid)) {
+                mediaMap.set(mid, {
+                  variantId: v.id,
+                  mediaId: mid,
+                  type: 'HERO_BG',
                   sortOrder: 0
                 });
               }
