@@ -35,3 +35,5 @@ export class MediaController {
     return this.mediaService.deleteMedia(id);
   }
 }
+
+

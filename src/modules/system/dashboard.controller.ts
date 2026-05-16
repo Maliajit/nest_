@@ -15,3 +15,5 @@ export class DashboardController {
     return this.systemService.getDashboardStats();
   }
 }
+
+

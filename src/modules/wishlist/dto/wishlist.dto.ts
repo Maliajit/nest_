@@ -5,3 +5,5 @@ export class ToggleWishlistDto {
   @IsString()
   variantId: string;
 }
+
+

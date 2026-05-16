@@ -178,7 +178,7 @@ export class UpdateProductDto {
   heroImage?: string;
 
   @IsOptional()
-  heroImageId?: number | string | bigint;
+  heroImageId?: number | string | number;
 
   @IsOptional()
   @IsArray()
@@ -214,3 +214,5 @@ export class UpdateProductDto {
   @IsOptional()
   taxClassId?: number | string;
 }
+
+

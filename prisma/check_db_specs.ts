@@ -32,8 +32,9 @@ async function test() {
   });
 
   console.log('Category Found:', JSON.stringify(cat, (key, value) =>
-    typeof value === 'bigint' ? value.toString() : value
+    typeof value === 'number' ? value.toString() : value
   , 2));
 }
 
 test().catch(console.error).finally(() => prisma.$disconnect());
+

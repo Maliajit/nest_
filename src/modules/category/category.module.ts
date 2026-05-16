@@ -9,3 +9,5 @@ import { PrismaModule } from '../../prisma/prisma.module';
   providers: [CategoryService],
 })
 export class CategoryModule {}
+
+

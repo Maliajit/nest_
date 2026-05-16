@@ -10,3 +10,5 @@ import { OrderModule } from '../order/order.module';
   exports: [PaymentService],
 })
 export class PaymentModule {}
+
+

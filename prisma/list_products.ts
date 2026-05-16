@@ -7,3 +7,4 @@ async function run() {
   console.log('Products:', JSON.stringify(products, null, 2));
 }
 run().finally(() => prisma.$disconnect());
+

@@ -188,7 +188,7 @@ export class CreateProductDto {
   heroImage?: string;
 
   @IsOptional()
-  heroImageId?: number | string | bigint;
+  heroImageId?: number | string | number;
 
   @IsOptional()
   @IsArray()
@@ -213,3 +213,5 @@ export class CreateProductDto {
   @IsOptional()
   taxClassId?: number | string;
 }
+
+

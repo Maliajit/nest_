@@ -78,11 +78,13 @@ export class SystemController {
 
   @Put('shipping-methods/:id')
   async updateShippingMethod(@Param('id') id: string, @Body() data: any) {
-    return this.systemService.updateShippingMethod(BigInt(id), data);
+    return this.systemService.updateShippingMethod(Number(id), data);
   }
 
   @Delete('shipping-methods/:id')
   async deleteShippingMethod(@Param('id') id: string) {
-    return this.systemService.deleteShippingMethod(BigInt(id));
+    return this.systemService.deleteShippingMethod(Number(id));
   }
 }
+
+

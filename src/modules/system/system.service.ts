@@ -260,7 +260,7 @@ export class SystemService {
         sortOrder: Number(rest.sortOrder) || 0,
         isCompound: !!rest.isCompound,
         taxClasses: taxClassIds ? {
-          connect: taxClassIds.map((id: any) => ({ id: BigInt(id) }))
+          connect: taxClassIds.map((id: any) => ({ id: Number(id) }))
         } : undefined
       },
       include: { taxClasses: true }
@@ -283,12 +283,12 @@ export class SystemService {
     
     if (taxClassIds !== undefined) {
       updateData.taxClasses = {
-        set: taxClassIds.map((tid: any) => ({ id: BigInt(tid) }))
+        set: taxClassIds.map((tid: any) => ({ id: Number(tid) }))
       };
     }
 
     const updated = await this.prisma.taxRate.update({
-      where: { id: BigInt(id) },
+      where: { id: Number(id) },
       data: updateData,
       include: { taxClasses: true }
     });
@@ -297,7 +297,7 @@ export class SystemService {
 
   async deleteTaxRate(id: number) {
     await this.prisma.taxRate.update({
-      where: { id: BigInt(id) },
+      where: { id: Number(id) },
       data: { deletedAt: new Date() },
     });
     return { success: true };
@@ -321,7 +321,7 @@ export class SystemService {
         description: rest.description || null,
         isDefault: rest.isDefault ? 1 : 0,
         taxRates: taxRateIds ? {
-          connect: taxRateIds.map((id: any) => ({ id: BigInt(id) }))
+          connect: taxRateIds.map((id: any) => ({ id: Number(id) }))
         } : undefined
       },
       include: { taxRates: true }
@@ -339,12 +339,12 @@ export class SystemService {
     
     if (taxRateIds !== undefined) {
       updateData.taxRates = {
-        set: taxRateIds.map((rid: any) => ({ id: BigInt(rid) }))
+        set: taxRateIds.map((rid: any) => ({ id: Number(rid) }))
       };
     }
 
     const updated = await this.prisma.taxClass.update({
-      where: { id: BigInt(id) },
+      where: { id: Number(id) },
       data: updateData,
       include: { taxRates: true }
     });
@@ -353,7 +353,7 @@ export class SystemService {
 
   async deleteTaxClass(id: number) {
     await this.prisma.taxClass.update({
-      where: { id: BigInt(id) },
+      where: { id: Number(id) },
       data: { deletedAt: new Date() },
     });
     return { success: true };
@@ -382,8 +382,8 @@ export class SystemService {
     return { success: true, data: method };
   }
 
-  async updateShippingMethod(id: number | bigint, data: any) {
-    const sId = BigInt(id);
+  async updateShippingMethod(id: number | number, data: any) {
+    const sId = Number(id);
     const method = await this.prisma.shippingMethod.update({
       where: { id: sId },
       data: {
@@ -397,8 +397,8 @@ export class SystemService {
     return { success: true, data: method };
   }
 
-  async deleteShippingMethod(id: number | bigint) {
-    const sId = BigInt(id);
+  async deleteShippingMethod(id: number | number) {
+    const sId = Number(id);
     await this.prisma.shippingMethod.update({
       where: { id: sId },
       data: { deletedAt: new Date() },
@@ -406,3 +406,5 @@ export class SystemService {
     return { success: true };
   }
 }
+
+

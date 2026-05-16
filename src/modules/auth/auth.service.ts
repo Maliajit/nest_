@@ -20,7 +20,7 @@ export class AuthService {
     const userData: Record<string, any> = { ...result, role };
 
     Object.keys(userData).forEach((key) => {
-      if (typeof userData[key] === 'bigint') {
+      if (typeof userData[key] === 'number') {
         userData[key] = userData[key].toString();
       }
     });
@@ -80,7 +80,7 @@ export class AuthService {
     // Update last login if it's a customer
     if (user.role === 'customer') {
       await this.prisma.customer.update({
-        where: { id: BigInt(user.id) },
+        where: { id: Number(user.id) },
         data: { lastLoginAt: new Date() },
       }).catch(err => console.error('Failed to update last login:', err));
     }
@@ -94,7 +94,7 @@ export class AuthService {
   async getAuthenticatedUser(userId: string, role: AuthRole) {
     if (role === 'admin') {
       const admin = await this.prisma.admin.findUnique({
-        where: { id: BigInt(userId) },
+        where: { id: Number(userId) },
       });
 
       if (!admin) {
@@ -105,7 +105,7 @@ export class AuthService {
     }
 
     const customer = await this.prisma.customer.findUnique({
-      where: { id: BigInt(userId) },
+      where: { id: Number(userId) },
     });
 
     if (!customer) {
@@ -195,3 +195,5 @@ export class AuthService {
     throw new UnauthorizedException('Invalid admin credentials');
   }
 }
+
+

@@ -20,7 +20,7 @@ export class SpecificationService {
 
   async findOne(id: number | string) {
     const spec = await this.prisma.specification.findUnique({
-      where: { id: BigInt(id) },
+      where: { id: Number(id) },
     });
     if (!spec) throw new NotFoundException('Specification not found');
     return { success: true, data: spec };
@@ -43,7 +43,7 @@ export class SpecificationService {
 
   async update(id: number | string, data: any) {
     const spec = await this.prisma.specification.update({
-      where: { id: BigInt(id) },
+      where: { id: Number(id) },
       data: {
         name: data.name,
         code: data.code,
@@ -59,7 +59,7 @@ export class SpecificationService {
 
   async remove(id: number | string) {
     await this.prisma.specification.delete({
-      where: { id: BigInt(id) },
+      where: { id: Number(id) },
     });
     return { success: true, message: 'Specification deleted' };
   }
@@ -92,7 +92,7 @@ export class SpecificationService {
 
   async findOneGroup(id: number | string) {
     const group = await this.prisma.specificationGroup.findUnique({
-      where: { id: BigInt(id) },
+      where: { id: Number(id) },
       include: {
         specifications: {
           include: { specification: true },
@@ -115,7 +115,7 @@ export class SpecificationService {
     if (data.specificationIds && Array.isArray(data.specificationIds)) {
       const mappings = data.specificationIds.map((specId, index) => ({
         specificationGroupId: group.id,
-        specificationId: BigInt(specId),
+        specificationId: Number(specId),
         sortOrder: index,
       }));
       await this.prisma.specGroupSpec.createMany({
@@ -127,7 +127,7 @@ export class SpecificationService {
   }
 
   async updateGroup(id: number | string, data: any) {
-    const groupId = BigInt(id);
+    const groupId = Number(id);
     const group = await this.prisma.specificationGroup.update({
       where: { id: groupId },
       data: {
@@ -144,7 +144,7 @@ export class SpecificationService {
 
       const mappings = data.specificationIds.map((specId, index) => ({
         specificationGroupId: groupId,
-        specificationId: BigInt(specId),
+        specificationId: Number(specId),
         sortOrder: index,
       }));
       await this.prisma.specGroupSpec.createMany({
@@ -157,7 +157,7 @@ export class SpecificationService {
 
   async removeGroup(id: number | string) {
     await this.prisma.specificationGroup.delete({
-      where: { id: BigInt(id) },
+      where: { id: Number(id) },
     });
     return { success: true, message: 'Specification group deleted' };
   }
@@ -166,8 +166,8 @@ export class SpecificationService {
   async addSpecToGroup(groupId: number | string, specId: number | string, sortOrder: number = 0) {
     const mapping = await this.prisma.specGroupSpec.create({
       data: {
-        specificationGroupId: BigInt(groupId),
-        specificationId: BigInt(specId),
+        specificationGroupId: Number(groupId),
+        specificationId: Number(specId),
         sortOrder,
       },
     });
@@ -178,8 +178,8 @@ export class SpecificationService {
     await this.prisma.specGroupSpec.delete({
       where: {
         specificationGroupId_specificationId: {
-          specificationGroupId: BigInt(groupId),
-          specificationId: BigInt(specId),
+          specificationGroupId: Number(groupId),
+          specificationId: Number(specId),
         },
       },
     });
@@ -189,7 +189,7 @@ export class SpecificationService {
   // --- Specification Value Methods ---
   async findAllValues(specId: number | string) {
     const values = await this.prisma.specificationValue.findMany({
-      where: { specificationId: BigInt(specId) },
+      where: { specificationId: Number(specId) },
       orderBy: { sortOrder: 'asc' },
     });
     return { success: true, data: values };
@@ -198,7 +198,7 @@ export class SpecificationService {
   async createValue(specId: number | string, data: any) {
     const value = await this.prisma.specificationValue.create({
       data: {
-        specificationId: BigInt(specId),
+        specificationId: Number(specId),
         value: data.value,
         sortOrder: data.sortOrder || 0,
         status: data.status !== undefined ? data.status : 1,
@@ -209,7 +209,7 @@ export class SpecificationService {
 
   async updateValue(id: number | string, data: any) {
     const value = await this.prisma.specificationValue.update({
-      where: { id: BigInt(id) },
+      where: { id: Number(id) },
       data: {
         value: data.value,
         sortOrder: data.sortOrder,
@@ -221,8 +221,10 @@ export class SpecificationService {
 
   async removeValue(id: number | string) {
     await this.prisma.specificationValue.delete({
-      where: { id: BigInt(id) },
+      where: { id: Number(id) },
     });
     return { success: true, message: 'Value deleted' };
   }
 }
+
+

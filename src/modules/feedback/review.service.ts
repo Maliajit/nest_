@@ -8,8 +8,8 @@ export class ReviewService {
 
   // 1. Submit a review
   async submitReview(customerId: string, dto: SubmitReviewDto) {
-    const cId = BigInt(customerId);
-    const pId = BigInt(dto.productId);
+    const cId = Number(customerId);
+    const pId = Number(dto.productId);
 
     // a. Check if user already reviewed this product
     const existingReview = await this.prisma.productReview.findFirst({
@@ -32,7 +32,7 @@ export class ReviewService {
       data: {
         productId: pId,
         customerId: cId,
-        productVariantId: dto.productVariantId ? BigInt(dto.productVariantId) : null,
+        productVariantId: dto.productVariantId ? Number(dto.productVariantId) : null,
         rating: dto.rating,
         title: dto.title,
         comment: dto.comment,
@@ -45,7 +45,7 @@ export class ReviewService {
 
   // 2. Get approved reviews for a product
   async getProductReviews(productId: string) {
-    const pId = BigInt(productId);
+    const pId = Number(productId);
     return this.prisma.productReview.findMany({
       where: { productId: pId, status: 'approved' },
       include: {
@@ -58,7 +58,7 @@ export class ReviewService {
 
   // 3. Admin: Update Review Status
   async updateReviewStatus(reviewId: string, status: string) {
-    const rId = BigInt(reviewId);
+    const rId = Number(reviewId);
     const review = await this.prisma.productReview.findUnique({ where: { id: rId } });
     if (!review) throw new NotFoundException('Review not found');
 
@@ -72,14 +72,14 @@ export class ReviewService {
   // Admin: Delete review
   async deleteReview(id: string | number) {
     await this.prisma.productReview.delete({
-      where: { id: BigInt(id) }
+      where: { id: Number(id) }
     });
     return { success: true };
   }
 
   // 4. Vote Review
   async voteReview(reviewId: string, type: 'helpful' | 'not_helpful') {
-      const rId = BigInt(reviewId);
+      const rId = Number(reviewId);
       if (type === 'helpful') {
           return this.prisma.productReview.update({
               where: { id: rId },
@@ -111,3 +111,5 @@ export class ReviewService {
     return { success: true, data: mapped };
   }
 }
+
+

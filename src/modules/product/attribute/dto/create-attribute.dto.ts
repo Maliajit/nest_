@@ -63,3 +63,5 @@ export class CreateAttributeDto {
   @Type(() => CreateAttributeValueDto)
   values?: CreateAttributeValueDto[];
 }
+
+

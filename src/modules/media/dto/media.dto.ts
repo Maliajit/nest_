@@ -25,7 +25,7 @@ export class CreateMediaDto {
   @IsNotEmpty()
   @Type(() => Number)
   @IsNumber()
-  fileSize: number; // Will convert to BigInt in service
+  fileSize: number; // Will convert to number in service
 
   @IsOptional()
   @IsNumber()
@@ -61,3 +61,5 @@ export class UpdateMediaDto {
   @IsString()
   description?: string;
 }
+
+

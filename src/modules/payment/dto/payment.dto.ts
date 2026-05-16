@@ -10,3 +10,5 @@ export class CreatePaymentOrderDto {
   @IsString()
   receipt: string;
 }
+
+

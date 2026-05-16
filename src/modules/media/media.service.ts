@@ -16,7 +16,7 @@ export class MediaService {
         filePath: file.path.replace(/\\/g, '/'), // Ensure cross-platform paths
         mimeType: file.mimetype,
         extension: ext.replace('.', ''),
-        fileSize: BigInt(file.size),
+        fileSize: Number(file.size),
         disk: 'local',
         fileType: file.mimetype.split('/')[0], // 'image', 'video', etc.
       },
@@ -29,7 +29,7 @@ export class MediaService {
     const media = await this.prisma.media.create({
       data: {
         ...rest,
-        fileSize: BigInt(fileSize)
+        fileSize: Number(fileSize)
       }
     });
     return { success: true, data: media };
@@ -44,7 +44,7 @@ export class MediaService {
 
   async getMediaById(id: string | number) {
     const media = await this.prisma.media.findUnique({
-      where: { id: BigInt(id) }
+      where: { id: Number(id) }
     });
     if (!media) {
       throw new NotFoundException(`Media with ID ${id} not found.`);
@@ -55,7 +55,7 @@ export class MediaService {
   async updateMedia(id: string | number, dto: UpdateMediaDto) {
     try {
       const media = await this.prisma.media.update({
-        where: { id: BigInt(id) },
+        where: { id: Number(id) },
         data: dto
       });
       return { success: true, data: media };
@@ -66,7 +66,7 @@ export class MediaService {
 
   async deleteMedia(id: string | number) {
     const media = await this.prisma.media.findUnique({
-      where: { id: BigInt(id) }
+      where: { id: Number(id) }
     });
 
     if (!media) {
@@ -76,7 +76,7 @@ export class MediaService {
     try {
       // Delete from database
       await this.prisma.media.delete({
-        where: { id: BigInt(id) }
+        where: { id: Number(id) }
       });
 
       // Try to delete from disk if it's a local file
@@ -103,3 +103,5 @@ export class MediaService {
     return { success: true, data: results.map(r => r.data) };
   }
 }
+
+

@@ -66,3 +66,4 @@ checkIntegrity()
   .finally(async () => {
     await prisma.$disconnect();
   });
+

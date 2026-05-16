@@ -47,3 +47,5 @@ export class FeedbackController {
     return this.reviewService.voteReview(reviewId, type);
   }
 }
+
+

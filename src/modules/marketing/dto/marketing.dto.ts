@@ -23,3 +23,5 @@ export class SpendPointsDto {
   @Min(1)
   points: number;
 }
+
+

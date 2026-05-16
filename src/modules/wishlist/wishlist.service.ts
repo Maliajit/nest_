@@ -6,9 +6,9 @@ export class WishlistService {
   constructor(private prisma: PrismaService) {}
 
   // Get or Create wishlist for customer
-  private async getOrCreateWishlist(customerId: string | number | bigint) {
+  private async getOrCreateWishlist(customerId: string | number | number) {
     if (!customerId || customerId === 'undefined' || customerId === 'null' || customerId === '') {
-      return { id: BigInt(0), items: [] as any[], name: 'Default' };
+      return { id: Number(0), items: [] as any[], name: 'Default' };
     }
 
     const customerIdStr = customerId.toString();
@@ -16,7 +16,7 @@ export class WishlistService {
 
     let wishlist = await this.prisma.wishlist.findFirst({
       where: isNumeric 
-        ? { customerId: BigInt(customerIdStr) }
+        ? { customerId: Number(customerIdStr) }
         : { sessionId: customerIdStr },
       include: { 
         items: { 
@@ -50,7 +50,7 @@ export class WishlistService {
       try {
         if (isNumeric) {
           wishlist = await this.prisma.wishlist.create({
-            data: { customerId: BigInt(customerIdStr), name: 'Default' },
+            data: { customerId: Number(customerIdStr), name: 'Default' },
             include: { 
         items: { 
           include: { 
@@ -152,7 +152,7 @@ export class WishlistService {
     if (!variantId || variantId === 'toggle' || variantId === 'undefined') {
         throw new BadRequestException(`Invalid variantId: ${variantId}`);
     }
-    const vId = BigInt(variantId);
+    const vId = Number(variantId);
     const wishlist = await this.getOrCreateWishlist(customerId);
 
     // Check if variant exists
@@ -191,3 +191,5 @@ export class WishlistService {
     return { success: true };
   }
 }
+
+

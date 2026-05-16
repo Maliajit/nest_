@@ -47,3 +47,4 @@ async function checkRelationalIntegrity() {
 checkRelationalIntegrity()
   .catch(console.error)
   .finally(() => prisma.$disconnect());
+

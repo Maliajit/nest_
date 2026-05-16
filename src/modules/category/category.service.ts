@@ -8,10 +8,10 @@ import { Prisma } from '@prisma/client';
 export class CategoryService {
   constructor(private prisma: PrismaService) {}
 
-  private toBigInt(value: any): bigint | null {
+  private toNumber(value: any): number | null {
     if (value === null || value === undefined || String(value).trim() === '') return null;
     try {
-      return BigInt(value);
+      return Number(value);
     } catch (e) {
       return null;
     }
@@ -42,14 +42,14 @@ export class CategoryService {
       metaDescription: dto.metaDescription || null,
       metaKeywords: dto.metaKeywords || null,
       imageUrl: imageUrl || image || null,
-      parentId: this.toBigInt(parentId),
-      imageId: this.toBigInt(imageId),
+      parentId: this.toNumber(parentId),
+      imageId: this.toNumber(imageId),
     };
 
     if (specificationGroupIds?.length) {
       data.specGroups = {
         create: specificationGroupIds
-            .map(id => this.toBigInt(id))
+            .map(id => this.toNumber(id))
             .filter(id => id !== null)
             .map(groupId => ({
                 specificationGroupId: groupId
@@ -60,7 +60,7 @@ export class CategoryService {
     if (attributeIds?.length) {
       data.attributes = {
         create: attributeIds.map(attr => ({
-          attributeId: this.toBigInt(attr.attributeId),
+          attributeId: this.toNumber(attr.attributeId),
           isRequired: attr.isRequired ? 1 : 0,
           isFilterable: attr.isFilterable ? 1 : 0,
           sortOrder: Number(attr.sortOrder) || 0
@@ -159,7 +159,7 @@ export class CategoryService {
       orderBy: { sortOrder: 'asc' },
     });
 
-    const buildTree = (parentId: bigint | null = null): any[] => {
+    const buildTree = (parentId: number | null = null): any[] => {
       return allCategories
         .filter((cat) => cat.parentId === parentId)
         .map((cat) => ({
@@ -174,7 +174,7 @@ export class CategoryService {
 
   async getCategoryById(id: string | number) {
     const category = await this.prisma.category.findUnique({
-      where: { id: BigInt(id) },
+      where: { id: Number(id) },
       include: {
         image: true,
         specGroups: {
@@ -252,10 +252,10 @@ export class CategoryService {
     }
 
     if (parentId !== undefined) {
-      data.parentId = this.toBigInt(parentId);
+      data.parentId = this.toNumber(parentId);
     }
     if (imageId !== undefined) {
-      data.imageId = this.toBigInt(imageId);
+      data.imageId = this.toNumber(imageId);
     }
 
     // Refresh Spec Groups
@@ -263,7 +263,7 @@ export class CategoryService {
         data.specGroups = {
             deleteMany: {},
             create: (specificationGroupIds || [])
-                .map(id => this.toBigInt(id))
+                .map(id => this.toNumber(id))
                 .filter(id => id !== null)
                 .map(groupId => ({
                     specificationGroupId: groupId
@@ -276,7 +276,7 @@ export class CategoryService {
         data.attributes = {
             deleteMany: {},
             create: (attributeIds || []).map(attr => ({
-                attributeId: this.toBigInt(attr.attributeId),
+                attributeId: this.toNumber(attr.attributeId),
                 isRequired: attr.isRequired ? 1 : 0,
                 isFilterable: attr.isFilterable ? 1 : 0,
                 sortOrder: Number(attr.sortOrder) || 0
@@ -286,7 +286,7 @@ export class CategoryService {
 
     try {
       const category = await this.prisma.category.update({
-        where: { id: BigInt(id) },
+        where: { id: Number(id) },
         data,
       });
       return { success: true, data: category };
@@ -306,7 +306,7 @@ export class CategoryService {
   async deleteCategory(id: string | number) {
     try {
       return await this.prisma.category.delete({
-        where: { id: BigInt(id) },
+        where: { id: Number(id) },
       });
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
@@ -318,3 +318,5 @@ export class CategoryService {
     }
   }
 }
+
+

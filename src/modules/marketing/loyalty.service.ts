@@ -7,7 +7,7 @@ export class LoyaltyService {
   constructor(private prisma: PrismaService) {}
 
   // Get or Create loyalty account for customer
-  private async getOrCreateLoyalty(customerId: bigint) {
+  private async getOrCreateLoyalty(customerId: number) {
     let loyalty = await this.prisma.customerLoyalty.findFirst({
       where: { customerId: customerId },
     });
@@ -34,7 +34,7 @@ export class LoyaltyService {
   }
 
   // Earn points on purchase
-  async earnPoints(customerId: bigint, orderId: bigint, amount: number) {
+  async earnPoints(customerId: number, orderId: number, amount: number) {
     const loyalty = await this.getOrCreateLoyalty(customerId);
     const pointsRatio = 1; // Example: 1 point per 1 unit of currency spent
     const pointsEarned = Math.floor(amount * pointsRatio);
@@ -65,7 +65,7 @@ export class LoyaltyService {
   }
 
   // Spend points on checkout
-  async spendPoints(customerId: bigint, pointsNeeded: number, orderId?: bigint) {
+  async spendPoints(customerId: number, pointsNeeded: number, orderId?: number) {
     const loyalty = await this.getOrCreateLoyalty(customerId);
 
     if (Number(loyalty.availablePoints) < pointsNeeded) {
@@ -99,7 +99,9 @@ export class LoyaltyService {
 
   // Get current balance
   async getLoyaltyBalance(customerId: string) {
-    const cId = BigInt(customerId);
+    const cId = Number(customerId);
     return this.getOrCreateLoyalty(cId);
   }
 }
+
+

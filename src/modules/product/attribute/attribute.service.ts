@@ -31,7 +31,7 @@ export class AttributeService {
 
   async findOne(id: number | string) {
     const attribute = await this.prisma.attribute.findUnique({
-      where: { id: BigInt(id) },
+      where: { id: Number(id) },
       include: {
         values: true,
       },
@@ -64,7 +64,7 @@ export class AttributeService {
         values: {
           create: values?.map(val => ({
             ...val,
-            imageId: val.imageId ? BigInt(val.imageId) : null,
+            imageId: val.imageId ? Number(val.imageId) : null,
           })),
         },
       },
@@ -86,7 +86,7 @@ export class AttributeService {
     const { values, isActive, ...rest } = updateAttributeDto as any;
 
     const attribute = await this.prisma.attribute.update({
-      where: { id: BigInt(id) },
+      where: { id: Number(id) },
       data: {
         ...rest,
         ...(isActive !== undefined ? { status: isActive ? 'active' : 'inactive' } : {}),
@@ -104,7 +104,7 @@ export class AttributeService {
 
   async remove(id: number | string) {
     await this.prisma.attribute.delete({
-      where: { id: BigInt(id) },
+      where: { id: Number(id) },
     });
 
     return {
@@ -119,8 +119,8 @@ export class AttributeService {
     const value = await this.prisma.attributeValue.create({
       data: {
         ...dto,
-        attributeId: BigInt(attributeId),
-        imageId: dto.imageId ? BigInt(dto.imageId) : null,
+        attributeId: Number(attributeId),
+        imageId: dto.imageId ? Number(dto.imageId) : null,
       },
     });
 
@@ -134,11 +134,11 @@ export class AttributeService {
     const { imageId, ...rest } = dto as any;
     const data: any = { ...rest };
     if (imageId !== undefined) {
-      data.imageId = imageId ? BigInt(imageId) : null;
+      data.imageId = imageId ? Number(imageId) : null;
     }
 
     const value = await this.prisma.attributeValue.update({
-      where: { id: BigInt(valueId) },
+      where: { id: Number(valueId) },
       data,
     });
 
@@ -150,7 +150,7 @@ export class AttributeService {
 
   async removeValue(valueId: number | string) {
     await this.prisma.attributeValue.delete({
-      where: { id: BigInt(valueId) },
+      where: { id: Number(valueId) },
     });
 
     return {
@@ -159,3 +159,5 @@ export class AttributeService {
     };
   }
 }
+
+

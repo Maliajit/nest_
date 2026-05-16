@@ -49,7 +49,7 @@ export class TagService {
 
   async getTagById(id: string | number) {
     const tag = await this.prisma.tag.findUnique({
-      where: { id: BigInt(id) },
+      where: { id: Number(id) },
       include: {
         _count: {
           select: { productTags: true }
@@ -81,7 +81,7 @@ export class TagService {
     try {
       const { status, ...rest } = dto;
       const tag = await this.prisma.tag.update({
-        where: { id: BigInt(id) },
+        where: { id: Number(id) },
         data: {
           ...rest,
           ...(status !== undefined ? { isActive: status === 1 } : {}),
@@ -101,7 +101,7 @@ export class TagService {
   async deleteTag(id: string | number) {
     try {
       return await this.prisma.tag.delete({
-        where: { id: BigInt(id) },
+        where: { id: Number(id) },
       });
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
@@ -113,3 +113,5 @@ export class TagService {
     }
   }
 }
+
+

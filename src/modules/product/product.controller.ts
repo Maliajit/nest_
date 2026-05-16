@@ -98,12 +98,12 @@ export class ProductController {
   ) {
     const product = await this.productService.getProductById(id);
     const selections = (body.selections || []).map(s => ({
-      attributeId: BigInt(s.attributeId),
-      valueIds: (s.valueIds || s.attributeValueIds || []).map(vId => BigInt(vId))
+      attributeId: Number(s.attributeId),
+      valueIds: (s.valueIds || s.attributeValueIds || []).map(vId => Number(vId))
     }));
     
     return this.variantGenerator.generateVariants(
-      BigInt(product.id), 
+      Number(product.id), 
       selections, 
       product.productCode || 'PROD'
     );
@@ -160,3 +160,5 @@ export class VariantController {
     return this.productService.uploadVariantMedia(id, files, type);
   }
 }
+
+

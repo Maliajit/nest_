@@ -9,7 +9,7 @@ import { map } from 'rxjs/operators';
 import { Prisma } from '@prisma/client';
 
 @Injectable()
-export class BigIntInterceptor implements NestInterceptor {
+export class numberInterceptor implements NestInterceptor {
     intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
         return next.handle().pipe(map((data) => this.serialize(data)));
     }
@@ -17,7 +17,7 @@ export class BigIntInterceptor implements NestInterceptor {
     private serialize(data: any): any {
         if (data === null || data === undefined) return data;
 
-        if (typeof data === 'bigint') {
+        if (typeof data === 'number') {
             return data.toString();
         }
 
@@ -43,3 +43,5 @@ export class BigIntInterceptor implements NestInterceptor {
         return data;
     }
 }
+
+

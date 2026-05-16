@@ -22,7 +22,7 @@ export class OrderService {
   async checkout(customerId: string, dto: CheckoutDto) {
     const customerIdStr = customerId?.toString() || '';
     const isNumeric = !isNaN(Number(customerIdStr)) && !customerIdStr.includes('usr_') && customerIdStr !== '';
-    const cId = isNumeric ? BigInt(customerIdStr) : null;
+    const cId = isNumeric ? Number(customerIdStr) : null;
 
     // 1. Get active cart
     const cart = await this.prisma.cart.findFirst({
@@ -60,7 +60,7 @@ export class OrderService {
 
     // 4. Validate Addresses
     const shippingAddr = await this.prisma.customerAddress.findUnique({
-      where: { id: BigInt(dto.shippingAddressId) },
+      where: { id: Number(dto.shippingAddressId) },
     });
     if (!shippingAddr || shippingAddr.customerId !== cId) {
       throw new BadRequestException('Invalid shipping address');
@@ -124,19 +124,19 @@ export class OrderService {
           paymentStatus: isOnline ? 'paid' : 'pending',
           shippingStatus: 'pending',
           paymentMethod: dto.paymentMethod || 'cod',
-          subtotal: new Prisma.Decimal(subtotal),
-          shippingTotal: new Prisma.Decimal(shippingTotal),
-          taxTotal: new Prisma.Decimal(0),
-          discountTotal: new Prisma.Decimal(totalDiscount),
-          grandTotal: new Prisma.Decimal(Math.max(0, subtotal + shippingTotal - totalDiscount)),
+          subtotal: Number(subtotal),
+          shippingTotal: Number(shippingTotal),
+          taxTotal: Number(0),
+          discountTotal: Number(totalDiscount),
+          grandTotal: Number(Math.max(0, subtotal + shippingTotal - totalDiscount)),
           customerNote: dto.notes,
           customerFirstName: cart.customer?.name?.split(' ')[0] || 'Customer',
           customerLastName: cart.customer?.name?.split(' ').slice(1).join(' ') || 'Name',
           customerMobile: cart.customer?.mobile || '',
           customerDob: dto.dob ? new Date(dto.dob) : (cart.customer?.dob || null),
           orderNumber: `ORD-${Date.now()}`,
-          loyaltyPointsUsed: new Prisma.Decimal(dto.redeemPoints || 0),
-          loyaltyPointsEarned: new Prisma.Decimal(pointsEarned),
+          loyaltyPointsUsed: Number(dto.redeemPoints || 0),
+          loyaltyPointsEarned: Number(pointsEarned),
           createdAt: new Date(),
         },
       });
@@ -203,7 +203,7 @@ export class OrderService {
             unitPrice: item.unitPrice,
             subtotal: item.total,
             total: item.total,
-            discountAmount: new Prisma.Decimal(0),
+            discountAmount: Number(0),
             attributes: item.attributes as any,
           },
         });
@@ -216,7 +216,7 @@ export class OrderService {
             offerId: appliedOffer.id,
             customerId: cId,
             orderId: order.id,
-            discountAmount: new Prisma.Decimal(discountAmount),
+            discountAmount: Number(discountAmount),
           }
         });
         await tx.offer.update({
@@ -296,7 +296,7 @@ export class OrderService {
 
   // Update Status (Admin)
   async updateStatus(orderId: string, status: string, notes?: string, adminId?: string) {
-    const oId = BigInt(orderId);
+    const oId = Number(orderId);
     const order = await this.prisma.order.findUnique({ where: { id: oId } });
     if (!order) throw new NotFoundException('Order not found');
 
@@ -307,7 +307,7 @@ export class OrderService {
       });
 
       await tx.orderStatusHistory.create({
-        data: { orderId: oId, status, notes, adminId: adminId ? BigInt(adminId) : null },
+        data: { orderId: oId, status, notes, adminId: adminId ? Number(adminId) : null },
       });
 
       return { success: true, data: updatedOrder };
@@ -316,8 +316,8 @@ export class OrderService {
 
   // Cancel Order (Customer)
   async cancelOrder(customerId: string, orderId: string, reason: string) {
-    const cId = BigInt(customerId);
-    const oId = BigInt(orderId);
+    const cId = Number(customerId);
+    const oId = Number(orderId);
 
     const order = await this.prisma.order.findUnique({
       where: { id: oId },
@@ -344,8 +344,8 @@ export class OrderService {
       });
 
       // Refund Loyalty Points if used
-      if (order.loyaltyPointsUsed && order.loyaltyPointsUsed.toNumber() > 0) {
-        const points = order.loyaltyPointsUsed.toNumber();
+      if (order.loyaltyPointsUsed && order.loyaltyPointsUsed > 0) {
+        const points = order.loyaltyPointsUsed;
         const loyalty = await tx.customerLoyalty.findFirst({ where: { customerId: cId } });
         if (loyalty) {
           await tx.loyaltyTransaction.create({
@@ -396,7 +396,7 @@ export class OrderService {
   // Get orders for a specific customer
   async getOrders(customerId: string) {
     const orders = await this.prisma.order.findMany({
-      where: { customerId: BigInt(customerId) },
+      where: { customerId: Number(customerId) },
       orderBy: { createdAt: 'desc' },
       include: {
         items: {
@@ -428,7 +428,7 @@ export class OrderService {
   }
 
   async getOrderById(customerId: string, orderId: string) {
-    const oId = BigInt(orderId);
+    const oId = Number(orderId);
     const order = await this.prisma.order.findUnique({
       where: { id: oId },
       include: {
@@ -469,7 +469,7 @@ export class OrderService {
     if (customerId) {
       const customerIdStr = customerId.toString();
       const isNumeric = !isNaN(Number(customerIdStr)) && !customerIdStr.includes('usr_') && customerIdStr !== '';
-      const cId = isNumeric ? BigInt(customerIdStr) : null;
+      const cId = isNumeric ? Number(customerIdStr) : null;
 
       if (cId && order.customerId !== cId) {
         throw new NotFoundException('Order not found');
@@ -482,7 +482,7 @@ export class OrderService {
   async calculateOrderTotal(customerId: string, pincode?: string) {
     const customerIdStr = customerId?.toString() || '';
     const isNumeric = !isNaN(Number(customerIdStr)) && !customerIdStr.includes('usr_') && customerIdStr !== '';
-    const cId = isNumeric ? BigInt(customerIdStr) : null;
+    const cId = isNumeric ? Number(customerIdStr) : null;
 
     const cart = await this.prisma.cart.findFirst({
       where: cId ? { customerId: cId, status: 'active' } : { sessionId: customerIdStr, status: 'active' },
@@ -520,7 +520,7 @@ export class OrderService {
   async calculateShipping(customerId: string, pincode: string) {
     const customerIdStr = customerId?.toString() || '';
     const isNumeric = !isNaN(Number(customerIdStr)) && !isNaN(Number(customerIdStr)) && !customerIdStr.includes('usr_') && customerIdStr !== '';
-    const cId = isNumeric ? BigInt(customerIdStr) : null;
+    const cId = isNumeric ? Number(customerIdStr) : null;
 
     const cart = await this.prisma.cart.findFirst({
       where: cId ? { customerId: cId, status: 'active' } : { sessionId: customerIdStr, status: 'active' },
@@ -545,3 +545,5 @@ export class OrderService {
     return rateData;
   }
 }
+
+

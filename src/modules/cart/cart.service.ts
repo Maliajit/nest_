@@ -12,9 +12,9 @@ export class CartService {
   ) {}
 
   // Get or Create active cart for customer
-  private async getOrCreateCart(customerId: string | number | bigint) {
+  private async getOrCreateCart(customerId: string | number | number) {
     if (!customerId || customerId === 'undefined' || customerId === 'null' || customerId === '') {
-      return { id: BigInt(0), items: [] as any[], subtotal: new Prisma.Decimal(0), discountTotal: new Prisma.Decimal(0), grandTotal: new Prisma.Decimal(0) };
+      return { id: Number(0), items: [] as any[], subtotal: Number(0), discountTotal: Number(0), grandTotal: Number(0) };
     }
 
     const customerIdStr = customerId.toString();
@@ -22,7 +22,7 @@ export class CartService {
     
     let cart = await this.prisma.cart.findFirst({
       where: isNumeric 
-        ? { customerId: BigInt(customerIdStr), status: 'active' }
+        ? { customerId: Number(customerIdStr), status: 'active' }
         : { sessionId: customerIdStr, status: 'active' },
       include: { 
         items: { 
@@ -60,7 +60,7 @@ export class CartService {
         if (isNumeric) {
           cart = await this.prisma.cart.create({
             data: {
-              customer: { connect: { id: BigInt(customerIdStr) } },
+              customer: { connect: { id: Number(customerIdStr) } },
               status: 'active',
             },
             include: { 
@@ -198,7 +198,7 @@ export class CartService {
     try {
       if (!dto.variantId) throw new BadRequestException('variantId is mandatory for all cart operations');
       const cart = await this.getOrCreateCart(customerId);
-      const variantId = BigInt(dto.variantId);
+      const variantId = Number(dto.variantId);
 
       // Validate variant exists
       const variant = await this.prisma.productVariant.findUnique({
@@ -224,8 +224,8 @@ export class CartService {
           cart: { connect: { id: cart.id } },
           productVariant: { connect: { id: variantId } },
           quantity: dto.quantity,
-          unitPrice: variant.price || new Prisma.Decimal(0),
-          total: new Prisma.Decimal((variant.price?.toNumber() || 0) * dto.quantity),
+          unitPrice: variant.price || Number(0),
+          total: Number((variant.price || 0) * dto.quantity),
         },
       });
 
@@ -239,7 +239,7 @@ export class CartService {
 
   // Update item quantity
   async updateItem(customerId: string, itemId: string, dto: UpdateCartItemDto) {
-    const iId = BigInt(itemId);
+    const iId = Number(itemId);
     
     const item = await this.prisma.cartItem.findUnique({
       where: { id: iId },
@@ -250,7 +250,7 @@ export class CartService {
     const isNumeric = !isNaN(Number(customerIdStr)) && !customerIdStr.includes('usr_') && customerIdStr !== '';
     
     const ownerMatch = isNumeric 
-      ? (item && item.cart.customerId === BigInt(customerIdStr))
+      ? (item && item.cart.customerId === Number(customerIdStr))
       : (item && item.cart.sessionId === customerIdStr);
 
     if (!item || !ownerMatch) {
@@ -261,7 +261,7 @@ export class CartService {
       where: { id: iId },
       data: {
         quantity: dto.quantity,
-        total: new Prisma.Decimal((item.unitPrice?.toNumber() || 0) * dto.quantity),
+        total: Number((item.unitPrice || 0) * dto.quantity),
       },
     });
 
@@ -271,7 +271,7 @@ export class CartService {
 
   // Remove item
   async removeItem(customerId: string, itemId: string) {
-    const iId = BigInt(itemId);
+    const iId = Number(itemId);
     const item = await this.prisma.cartItem.findUnique({
       where: { id: iId },
       include: { cart: true },
@@ -281,7 +281,7 @@ export class CartService {
     const isNumeric = !isNaN(Number(customerIdStr)) && !customerIdStr.includes('usr_') && customerIdStr !== '';
     
     const ownerMatch = isNumeric 
-      ? (item && item.cart.customerId === BigInt(customerIdStr))
+      ? (item && item.cart.customerId === Number(customerIdStr))
       : (item && item.cart.sessionId === customerIdStr);
 
     if (!item || !ownerMatch) {
@@ -297,7 +297,7 @@ export class CartService {
   // Clear cart
   async clearCart(customerId: string) {
     const cart = await this.prisma.cart.findFirst({
-      where: { customerId: BigInt(customerId), status: 'active' },
+      where: { customerId: Number(customerId), status: 'active' },
     });
     if (cart) {
       await this.prisma.cartItem.deleteMany({ where: { cartId: cart.id } });
@@ -311,7 +311,7 @@ export class CartService {
   }
 
   // Recalculate totals
-  private async updateCartTotals(cartId: bigint) {
+  private async updateCartTotals(cartId: number) {
     const cart = await this.prisma.cart.findUnique({
       where: { id: cartId },
       include: { items: true, offer: true },
@@ -319,7 +319,7 @@ export class CartService {
 
     if (!cart) return;
 
-    const subtotal = cart.items.reduce((sum, item) => sum + (item.total?.toNumber() || 0), 0);
+    const subtotal = cart.items.reduce((sum, item) => sum + (item.total || 0), 0);
     let discount = 0;
 
     if (cart.offerId && cart.offer) {
@@ -329,10 +329,12 @@ export class CartService {
     await this.prisma.cart.update({
       where: { id: cartId },
       data: {
-        subtotal: new Prisma.Decimal(subtotal),
-        discountTotal: new Prisma.Decimal(discount),
-        grandTotal: new Prisma.Decimal(subtotal - discount),
+        subtotal: Number(subtotal),
+        discountTotal: Number(discount),
+        grandTotal: Number(subtotal - discount),
       },
     });
   }
 }
+
+

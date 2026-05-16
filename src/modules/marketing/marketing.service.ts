@@ -9,7 +9,7 @@ export class MarketingService {
   // Validate a coupon based on code, customer and cart amount
   async validateCoupon(customerId: string, code: string, cartAmount: number) {
     const now = new Date();
-    const cId = BigInt(customerId);
+    const cId = Number(customerId);
 
     // 1. Fetch active coupon (Offer)
     const offer = await this.prisma.offer.findFirst({
@@ -26,10 +26,10 @@ export class MarketingService {
     }
 
     // 2. Minimum/Maximum Cart Amount check
-    if (offer.minCartAmount && new Prisma.Decimal(cartAmount).lt(offer.minCartAmount)) {
+    if (offer.minCartAmount && Number(cartAmount) < Number(offer.minCartAmount)) {
       throw new BadRequestException(`Minimum cart amount not met: ${offer.minCartAmount}`);
     }
-    if (offer.maxCartAmount && new Prisma.Decimal(cartAmount).gt(offer.maxCartAmount)) {
+    if (offer.maxCartAmount && Number(cartAmount) > Number(offer.maxCartAmount)) {
       throw new BadRequestException(`Maximum cart amount exceeded: ${offer.maxCartAmount}`);
     }
 
@@ -73,7 +73,7 @@ export class MarketingService {
 
   async getOfferById(id: string | number) {
     const offer = await this.prisma.offer.findUnique({
-      where: { id: BigInt(id) },
+      where: { id: Number(id) },
       include: {
         categories: { include: { category: true } },
       }
@@ -99,10 +99,10 @@ export class MarketingService {
       code: data.code,
       status: status,
       offerType: data.offerType || data.type || 'percentage',
-      discountValue: new Prisma.Decimal(data.discountValue || 0),
-      minCartAmount: data.minCartAmount ? new Prisma.Decimal(data.minCartAmount) : null,
-      maxCartAmount: data.maxCartAmount ? new Prisma.Decimal(data.maxCartAmount) : null,
-      maxDiscount: data.maxDiscount ? new Prisma.Decimal(data.maxDiscount) : null,
+      discountValue: Number(data.discountValue || 0),
+      minCartAmount: data.minCartAmount ? Number(data.minCartAmount) : null,
+      maxCartAmount: data.maxCartAmount ? Number(data.maxCartAmount) : null,
+      maxDiscount: data.maxDiscount ? Number(data.maxDiscount) : null,
       maxUses: data.maxUses ? Number(data.maxUses) : null,
       usesPerCustomer: data.usesPerCustomer ? Number(data.usesPerCustomer) : null,
       startsAt: data.startsAt ? new Date(data.startsAt) : new Date(),
@@ -122,7 +122,7 @@ export class MarketingService {
           ...prismaData,
           categories: categoryIds ? {
             create: categoryIds.map((id: string) => ({
-              category: { connect: { id: BigInt(id) } }
+              category: { connect: { id: Number(id) } }
             }))
           } : undefined
         },
@@ -137,7 +137,7 @@ export class MarketingService {
 
   async updateOffer(id: string | number, data: any) {
     const { categoryIds, ...rest } = data;
-    const offerId = BigInt(id);
+    const offerId = Number(id);
 
     // Map status from isActive boolean if provided
     const status = data.isActive !== undefined ? (data.isActive ? 1 : 0) : (data.status !== undefined ? Number(data.status) : undefined);
@@ -147,10 +147,10 @@ export class MarketingService {
     if (data.code !== undefined) payload.code = data.code;
     if (status !== undefined) payload.status = status;
     if (data.offerType !== undefined || data.type !== undefined) payload.offerType = data.offerType || data.type;
-    if (data.discountValue !== undefined) payload.discountValue = new Prisma.Decimal(data.discountValue);
-    if (data.minCartAmount !== undefined) payload.minCartAmount = data.minCartAmount ? new Prisma.Decimal(data.minCartAmount) : null;
-    if (data.maxCartAmount !== undefined) payload.maxCartAmount = data.maxCartAmount ? new Prisma.Decimal(data.maxCartAmount) : null;
-    if (data.maxDiscount !== undefined) payload.maxDiscount = data.maxDiscount ? new Prisma.Decimal(data.maxDiscount) : null;
+    if (data.discountValue !== undefined) payload.discountValue = Number(data.discountValue);
+    if (data.minCartAmount !== undefined) payload.minCartAmount = data.minCartAmount ? Number(data.minCartAmount) : null;
+    if (data.maxCartAmount !== undefined) payload.maxCartAmount = data.maxCartAmount ? Number(data.maxCartAmount) : null;
+    if (data.maxDiscount !== undefined) payload.maxDiscount = data.maxDiscount ? Number(data.maxDiscount) : null;
     if (data.maxUses !== undefined) payload.maxUses = data.maxUses ? Number(data.maxUses) : null;
     if (data.usesPerCustomer !== undefined) payload.usesPerCustomer = data.usesPerCustomer ? Number(data.usesPerCustomer) : null;
     if (data.startsAt !== undefined) payload.startsAt = new Date(data.startsAt);
@@ -175,7 +175,7 @@ export class MarketingService {
           ...payload,
           categories: categoryIds ? {
             create: categoryIds.map((id: string) => ({
-              category: { connect: { id: BigInt(id) } }
+              category: { connect: { id: Number(id) } }
             }))
           } : undefined
         },
@@ -190,7 +190,7 @@ export class MarketingService {
 
   async deleteOffer(id: string | number) {
     await this.prisma.offer.delete({
-      where: { id: BigInt(id) }
+      where: { id: Number(id) }
     });
     return { success: true };
   }
@@ -213,7 +213,7 @@ export class MarketingService {
   }
 
   // Track coupon usage
-  async trackUsage(offerId: bigint, customerId: bigint, orderId: bigint) {
+  async trackUsage(offerId: number, customerId: number, orderId: number) {
     await this.prisma.$transaction([
       this.prisma.offerUsage.create({
         data: {
@@ -229,3 +229,5 @@ export class MarketingService {
     ]);
   }
 }
+
+

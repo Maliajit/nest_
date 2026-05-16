@@ -21,3 +21,5 @@ export class WishlistController {
     return this.wishlistService.clearWishlist(customerId);
   }
 }
+
+

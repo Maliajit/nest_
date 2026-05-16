@@ -12,7 +12,7 @@ export class VariantGeneratorService {
    * @param selections An array of objects containing attributeId and array of selected attributeValueIds
    * @param productCode The base product code for SKU generation
    */
-  async generateVariants(productId: bigint, selections: { attributeId: bigint, valueIds: bigint[] }[], productCode: string) {
+  async generateVariants(productId: number, selections: { attributeId: number, valueIds: number[] }[], productCode: string) {
     if (selections.length === 0) {
       throw new BadRequestException('No attributes selected for variant generation.');
     }
@@ -70,7 +70,7 @@ export class VariantGeneratorService {
 
       variantsToCreate.push({
         sku,
-        price: new Prisma.Decimal(0),
+        price: Number(0),
         qty: 0,
         inStock: true,
         isActive: true,
@@ -136,9 +136,11 @@ export class VariantGeneratorService {
     };
   }
 
-  private cartesianProduct(arrays: bigint[][]): bigint[][] {
+  private cartesianProduct(arrays: number[][]): number[][] {
     return arrays.reduce((a, b) => {
-      return a.flatMap(d => b.map(e => [d, e].flat())) as bigint[][];
-    }, [[]] as bigint[][]);
+      return a.flatMap(d => b.map(e => [d, e].flat())) as number[][];
+    }, [[]] as number[][]);
   }
 }
+
+

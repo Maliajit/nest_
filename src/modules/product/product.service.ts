@@ -12,15 +12,24 @@ export class ProductService {
     private mediaService: MediaService,
   ) {}
 
-  private safeBigInt(value: any, name: string, required = false): bigint | null {
+  private safeNumber(value: any, name: string, required = false): number | null {
     if (value === null || value === undefined || value === 'null' || value === '') {
       if (required) throw new BadRequestException(`${name} is required.`);
       return null;
     }
     try {
-      return BigInt(value);
+      return Number(value);
     } catch (e) {
-      throw new BadRequestException(`Invalid ${name}: "${value}" is not a valid BigInt.`);
+      throw new BadRequestException(`Invalid ${name}: "${value}" is not a valid number.`);
+    }
+  }
+
+  private parseJson(value: any, defaultValue: any = []): any {
+    if (!value || typeof value !== 'string') return value || defaultValue;
+    try {
+      return JSON.parse(value);
+    } catch (e) {
+      return defaultValue;
     }
   }
 
@@ -52,14 +61,14 @@ export class ProductService {
     const { mainCategoryId, taxClassId, ...rest } = dto;
     
     try {
-      // Convert IDs to BigInt and decimals to string for Prisma
+      // Convert IDs to number and decimals to string for Prisma
       const data: any = {
         ...rest,
-        price: rest.price ? rest.price.toString() : '0',
-        sellingPrice: rest.price ? rest.price.toString() : '0',
+        price: rest.price ? Number(rest.price) : 0,
+        sellingPrice: rest.price ? Number(rest.price) : 0,
 
-        mainCategoryId: this.safeBigInt(mainCategoryId, 'mainCategoryId'),
-        taxClassId: this.safeBigInt(taxClassId, 'taxClassId'),
+        mainCategoryId: this.safeNumber(mainCategoryId, 'mainCategoryId'),
+        taxClassId: this.safeNumber(taxClassId, 'taxClassId'),
       };
 
     if (imageFiles && imageFiles.length > 0) {
@@ -67,11 +76,11 @@ export class ProductService {
         imageFiles.map(file => this.mediaService.saveUploadedFile(file))
       );
       // Construct public URLs for the images
-      data.images = savedMedia.map(m => `/uploads/${m.data.fileName}`);
+      data.images = JSON.stringify(savedMedia.map(m => `/uploads/${m.data.fileName}`));
     }
 
     if (rest.specialPrice) {
-      data.specialPrice = rest.specialPrice.toString();
+      data.specialPrice = Number(rest.specialPrice);
     }
 
     // Filter data to only include valid Prisma fields for Product
@@ -104,7 +113,7 @@ export class ProductService {
       metaTitle: data.metaTitle,
       metaDescription: data.metaDescription,
       metaKeywords: data.metaKeywords,
-      images: data.images || (dto as any).gallery?.map(g => g.url) || [],
+      images: data.images || JSON.stringify((dto as any).gallery?.map((g: any) => g.url) || []),
 
       mainCategoryId: data.mainCategoryId || (dto as any).categoryId,
       taxClassId: data.taxClassId,
@@ -133,7 +142,7 @@ export class ProductService {
           const tagData = dto.tagIds
             .map((tId: any) => ({
               productId,
-              tagId: this.safeBigInt(tId, 'tagId'),
+              tagId: this.safeNumber(tId, 'tagId'),
             }))
             .filter((t: any) => t.tagId !== null);
           
@@ -143,16 +152,16 @@ export class ProductService {
         }
 
         // 1.5 Handle Product Default Media
-        const productMediaMap = new Map<bigint, any>();
+        const productMediaMap = new Map<number, any>();
         if (data.heroImageId) {
-          const mid = this.safeBigInt(data.heroImageId, 'heroImageId');
+          const mid = this.safeNumber(data.heroImageId, 'heroImageId');
           if (mid) {
             productMediaMap.set(mid, { productId, mediaId: mid, type: 'MAIN', sortOrder: 0 });
           }
         }
         if (data.galleryIds && Array.isArray(data.galleryIds)) {
           data.galleryIds.forEach((mid: any, idx: number) => {
-            const id = this.safeBigInt(mid, 'mediaId');
+            const id = this.safeNumber(mid, 'mediaId');
             if (id && !productMediaMap.has(id)) {
               productMediaMap.set(id, { productId, mediaId: id, type: 'GALLERY', sortOrder: productMediaMap.size });
             }
@@ -167,9 +176,9 @@ export class ProductService {
           const specData = dto.specifications
             .map((spec: any) => ({
               productId,
-              specificationId: this.safeBigInt(spec.specificationId, 'specificationId'),
+              specificationId: this.safeNumber(spec.specificationId, 'specificationId'),
               value: spec.value || '',
-              specificationValueId: this.safeBigInt(spec.specificationValueId, 'specificationValueId'),
+              specificationValueId: this.safeNumber(spec.specificationValueId, 'specificationValueId'),
             }))
             .filter((s: any) => s.specificationId !== null);
 
@@ -185,8 +194,8 @@ export class ProductService {
               data: {
                 productId,
                 sku: variant.sku || `VAR-${Date.now()}-${Math.random()}`,
-                price: new Prisma.Decimal(variant.price || 0),
-                sellingPrice: new Prisma.Decimal(variant.price || 0),
+                price: Number(variant.price || 0),
+                sellingPrice: Number(variant.price || 0),
                 qty: Number(variant.stock || variant.qty || 0),
                 inStock: (Number(variant.stock || variant.qty || 0)) > 0,
                 isActive: true,
@@ -197,18 +206,18 @@ export class ProductService {
               await tx.variantAttribute.createMany({
                 data: variant.attributeValues.map((av: any) => ({
                   variantId: v.id,
-                  attributeId: this.safeBigInt(av.attributeId, 'attributeId'),
-                  attributeValueId: this.safeBigInt(av.attributeValueId, 'attributeValueId'),
+                  attributeId: this.safeNumber(av.attributeId, 'attributeId'),
+                  attributeValueId: this.safeNumber(av.attributeValueId, 'attributeValueId'),
                 })),
               });
             }
 
             // Variant Media (Unify and ensure uniqueness)
-            const mediaMap = new Map<bigint, any>();
+            const mediaMap = new Map<number, any>();
 
             // 1. Handle Hero Image (Priority: MAIN type)
             if (variant.heroImageId) {
-              const mid = this.safeBigInt(variant.heroImageId, 'heroImageId', true);
+              const mid = this.safeNumber(variant.heroImageId, 'heroImageId', true);
               if (mid) {
                 mediaMap.set(mid, {
                   variantId: v.id,
@@ -221,7 +230,7 @@ export class ProductService {
 
             // 1.5 Handle Background Image (Type: HERO_BG)
             if (variant.heroBgImageId) {
-              const mid = this.safeBigInt(variant.heroBgImageId, 'heroBgImageId', true);
+              const mid = this.safeNumber(variant.heroBgImageId, 'heroBgImageId', true);
               if (mid && !mediaMap.has(mid)) {
                 mediaMap.set(mid, {
                   variantId: v.id,
@@ -235,7 +244,7 @@ export class ProductService {
             // 2. Handle Gallery IDs
             if (variant.galleryIds && Array.isArray(variant.galleryIds)) {
               variant.galleryIds.forEach((mid: any) => {
-                const id = this.safeBigInt(mid, 'mediaId', true);
+                const id = this.safeNumber(mid, 'mediaId', true);
                 if (id && !mediaMap.has(id)) {
                   mediaMap.set(id, {
                     variantId: v.id,
@@ -250,7 +259,7 @@ export class ProductService {
             // 3. Handle Gallery objects (new format)
             if (variant.gallery && Array.isArray(variant.gallery)) {
               variant.gallery.forEach((img: any) => {
-                const id = this.safeBigInt(img.id || img.mediaId, 'mediaId', true);
+                const id = this.safeNumber(img.id || img.mediaId, 'mediaId', true);
                 if (id && !mediaMap.has(id)) {
                   mediaMap.set(id, {
                     variantId: v.id,
@@ -269,7 +278,7 @@ export class ProductService {
           }
         }
 
-        return product;
+        return { ...product, images: this.parseJson(product.images) };
       });
     } catch (error) {
       this.handlePrismaError(error, 'Create Product');
@@ -297,22 +306,22 @@ export class ProductService {
 
     if (search) {
       where.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { sku: { contains: search, mode: 'insensitive' } },
-        { shortDescription: { contains: search, mode: 'insensitive' } },
+        { name: { contains: search } },
+        { sku: { contains: search } },
+        { shortDescription: { contains: search } },
       ];
     }
 
     if (categoryId) {
-      where.mainCategoryId = BigInt(categoryId);
+      where.mainCategoryId = Number(categoryId);
     }
 
 
 
     if (minPrice !== undefined || maxPrice !== undefined) {
       where.sellingPrice = {};
-      if (minPrice !== undefined) where.sellingPrice.gte = new Prisma.Decimal(minPrice);
-      if (maxPrice !== undefined) where.sellingPrice.lte = new Prisma.Decimal(maxPrice);
+      if (minPrice !== undefined) where.sellingPrice.gte = Number(minPrice);
+      if (maxPrice !== undefined) where.sellingPrice.lte = Number(maxPrice);
     }
 
     let orderBy: Prisma.ProductOrderByWithRelationInput = { createdAt: 'desc' };
@@ -336,7 +345,7 @@ export class ProductService {
     const skip = (page - 1) * limit;
 
     console.log('getAllProducts filters:', filters);
-    console.log('getAllProducts where clause:', JSON.stringify(where, (key, value) => typeof value === 'bigint' ? value.toString() : value));
+    console.log('getAllProducts where clause:', JSON.stringify(where, (key, value) => typeof value === 'number' ? value.toString() : value));
 
     const [total, products] = await Promise.all([
       this.prisma.product.count({ where }),
@@ -414,6 +423,7 @@ export class ProductService {
 
     const mappedProducts = products.map(p => ({
       ...p,
+      images: this.parseJson(p.images),
       isActive: p.status === 'active' || p.status === '1',
       stock: p.qty, // Map qty to stock for frontend consistency
       soldCount: (p as any).orderItems?.reduce((acc, item) => acc + (item.quantity || 0), 0) || 0,
@@ -473,7 +483,11 @@ export class ProductService {
 
     return {
       success: true,
-      data: products.map(p => ({ ...p, isActive: true })),
+      data: products.map(p => ({ 
+        ...p, 
+        images: this.parseJson(p.images),
+        isActive: true 
+      })),
     };
   }
 
@@ -481,7 +495,7 @@ export class ProductService {
     const isId = /^\d+$/.test(idOrSlug);
     
     const product = await this.prisma.product.findUnique({
-      where: isId ? { id: BigInt(idOrSlug) } : { slug: idOrSlug },
+      where: isId ? { id: Number(idOrSlug) } : { slug: idOrSlug },
       include: {
 
         mainCategory: true,
@@ -549,6 +563,7 @@ export class ProductService {
 
     return {
       ...product,
+      images: this.parseJson(product.images),
       isActive: product.status === 'active' || product.status === '1',
       averageRating: stats._avg.rating || 0,
       reviewCount: stats._count.rating || 0,
@@ -572,7 +587,7 @@ export class ProductService {
 
   async updateProduct(id: string | number, dto: UpdateProductDto, imageFiles?: Array<Express.Multer.File>) {
     try {
-      const productId = this.safeBigInt(id, 'productId', true) as bigint;
+      const productId = this.safeNumber(id, 'productId', true) as number;
       const { 
         mainCategoryId, 
         isActive, 
@@ -592,14 +607,14 @@ export class ProductService {
         prismaData.status = isActive ? 'active' : 'inactive';
       }
 
-      if (rest.price !== undefined) prismaData.price = rest.price.toString();
-      if (rest.specialPrice !== undefined) prismaData.specialPrice = rest.specialPrice ? rest.specialPrice.toString() : null;
+      if (rest.price !== undefined) prismaData.price = Number(rest.price);
+      if (rest.specialPrice !== undefined) prismaData.specialPrice = rest.specialPrice ? Number(rest.specialPrice) : null;
       
 
-      if (taxClassId !== undefined) prismaData.taxClassId = this.safeBigInt(taxClassId, 'taxClassId');
+      if (taxClassId !== undefined) prismaData.taxClassId = this.safeNumber(taxClassId, 'taxClassId');
       if (mainCategoryId !== undefined || categoryId !== undefined) {
         const catId = mainCategoryId || categoryId;
-        prismaData.mainCategoryId = this.safeBigInt(catId, 'mainCategoryId');
+        prismaData.mainCategoryId = this.safeNumber(catId, 'mainCategoryId');
       }
 
       if (shortDesc && !rest.shortDescription) {
@@ -610,9 +625,9 @@ export class ProductService {
         const savedMedia = await Promise.all(
           imageFiles.map(file => this.mediaService.saveUploadedFile(file))
         );
-        prismaData.images = savedMedia.map(m => `/uploads/${m.data.fileName}`);
+        prismaData.images = JSON.stringify(savedMedia.map(m => `/uploads/${m.data.fileName}`));
       } else if (gallery) {
-        prismaData.images = gallery.map((g: any) => typeof g === 'string' ? g : g.url);
+        prismaData.images = JSON.stringify(gallery.map((g: any) => typeof g === 'string' ? g : g.url));
       }
 
       const validFields = [
@@ -644,9 +659,9 @@ export class ProductService {
             const specData = specifications
               .map((spec: any) => ({
                 productId,
-                specificationId: this.safeBigInt(spec.specificationId, 'specificationId'),
+                specificationId: this.safeNumber(spec.specificationId, 'specificationId'),
                 value: spec.value || '',
-                specificationValueId: this.safeBigInt(spec.specificationValueId, 'specificationValueId'),
+                specificationValueId: this.safeNumber(spec.specificationValueId, 'specificationValueId'),
               }))
               .filter((s: any) => s.specificationId !== null);
 
@@ -663,7 +678,7 @@ export class ProductService {
             const tagData = tagIds
               .map((tagId: any) => ({
                 productId,
-                tagId: this.safeBigInt(tagId, 'tagId'),
+                tagId: this.safeNumber(tagId, 'tagId'),
               }))
               .filter((t: any) => t.tagId !== null);
 
@@ -678,10 +693,10 @@ export class ProductService {
         const galleryIds = (dto as any).galleryIds;
 
         if (heroImageId !== undefined || galleryIds !== undefined) {
-          const incomingMedia: { mediaId: bigint, type: string, sortOrder: number }[] = [];
+          const incomingMedia: { mediaId: number, type: string, sortOrder: number }[] = [];
           
           if (heroImageId) {
-            const bmid = this.safeBigInt(heroImageId, 'heroImageId');
+            const bmid = this.safeNumber(heroImageId, 'heroImageId');
             if (bmid) {
               incomingMedia.push({ mediaId: bmid, type: 'MAIN', sortOrder: 0 });
             }
@@ -689,7 +704,7 @@ export class ProductService {
           
           if (galleryIds && Array.isArray(galleryIds)) {
             galleryIds.forEach((mid: any) => {
-              const bmid = this.safeBigInt(mid, 'mediaId');
+              const bmid = this.safeNumber(mid, 'mediaId');
               if (bmid) {
                 // Avoid duplication if already MAIN
                 if (!incomingMedia.find(m => m.mediaId === bmid)) {
@@ -741,7 +756,7 @@ export class ProductService {
           const currentIds = currentVariants.map(v => v.id);
           const incomingIds = variants
             .filter((v: any) => v.id && !v.id.toString().includes('.'))
-            .map((v: any) => this.safeBigInt(v.id, 'variantId'))
+            .map((v: any) => this.safeNumber(v.id, 'variantId'))
             .filter(Boolean);
 
           const toDelete = currentIds.filter(id => !incomingIds.includes(id));
@@ -753,8 +768,8 @@ export class ProductService {
             const isNew = !variant.id || variant.id.toString().includes('.');
             const variantData: any = {
               sku: variant.sku || `VAR-${Date.now()}-${Math.random()}`,
-              price: new Prisma.Decimal(variant.price || 0),
-              sellingPrice: new Prisma.Decimal(variant.price || 0),
+              price: Number(variant.price || 0),
+              sellingPrice: Number(variant.price || 0),
               qty: Number(variant.stock) || 0,
               inStock: (Number(variant.stock) || 0) > 0,
               isActive: true,
@@ -763,11 +778,11 @@ export class ProductService {
             let v;
             if (isNew) {
               v = await tx.productVariant.create({
-                data: { ...variantData, productId: productId as bigint }
+                data: { ...variantData, productId: productId as number }
               });
             } else {
               v = await tx.productVariant.update({
-                where: { id: this.safeBigInt(variant.id, 'variantId', true) as bigint },
+                where: { id: this.safeNumber(variant.id, 'variantId', true) as number },
                 data: variantData
               });
               await tx.variantAttribute.deleteMany({ where: { variantId: v.id } });
@@ -778,18 +793,18 @@ export class ProductService {
               await tx.variantAttribute.createMany({
                 data: variant.attributeValues.map((av: any) => ({
                   variantId: v.id,
-                  attributeId: this.safeBigInt(av.attributeId, 'attributeId'),
-                  attributeValueId: this.safeBigInt(av.attributeValueId, 'attributeValueId'),
+                  attributeId: this.safeNumber(av.attributeId, 'attributeId'),
+                  attributeValueId: this.safeNumber(av.attributeValueId, 'attributeValueId'),
                 })),
               });
             }
 
             // Sync Images (Unify and ensure uniqueness)
-            const mediaMap = new Map<bigint, any>();
+            const mediaMap = new Map<number, any>();
 
             // 1. Handle Hero Image (Priority: MAIN type)
             if (variant.heroImageId) {
-              const mid = this.safeBigInt(variant.heroImageId, 'heroImageId', true);
+              const mid = this.safeNumber(variant.heroImageId, 'heroImageId', true);
               if (mid) {
                 mediaMap.set(mid, {
                   variantId: v.id,
@@ -802,7 +817,7 @@ export class ProductService {
 
             // 1.5 Handle Background Image (Type: HERO_BG)
             if (variant.heroBgImageId) {
-              const mid = this.safeBigInt(variant.heroBgImageId, 'heroBgImageId', true);
+              const mid = this.safeNumber(variant.heroBgImageId, 'heroBgImageId', true);
               if (mid && !mediaMap.has(mid)) {
                 mediaMap.set(mid, {
                   variantId: v.id,
@@ -816,7 +831,7 @@ export class ProductService {
             // 2. Handle Gallery IDs
             if (variant.galleryIds && Array.isArray(variant.galleryIds)) {
               variant.galleryIds.forEach((mid: any) => {
-                const id = this.safeBigInt(mid, 'mediaId', true);
+                const id = this.safeNumber(mid, 'mediaId', true);
                 if (id && !mediaMap.has(id)) {
                   mediaMap.set(id, {
                     variantId: v.id,
@@ -831,7 +846,7 @@ export class ProductService {
             // 3. Handle Gallery objects (new format)
             if (variant.gallery && Array.isArray(variant.gallery)) {
               variant.gallery.forEach((img: any) => {
-                const id = this.safeBigInt(img.id || img.mediaId, 'mediaId', true);
+                const id = this.safeNumber(img.id || img.mediaId, 'mediaId', true);
                 if (id && !mediaMap.has(id)) {
                   mediaMap.set(id, {
                     variantId: v.id,
@@ -850,7 +865,7 @@ export class ProductService {
           }
         }
 
-        return product;
+        return { ...product, images: this.parseJson(product.images) };
       });
     } catch (error) {
       this.handlePrismaError(error, 'Update Product');
@@ -860,7 +875,7 @@ export class ProductService {
   async deleteProduct(id: string | number) {
     try {
       await this.prisma.product.delete({
-        where: { id: BigInt(id) },
+        where: { id: Number(id) },
       });
       return { success: true };
     } catch (error) {
@@ -875,7 +890,7 @@ export class ProductService {
 
   async getProductVariants(productId: string | number) {
     const variants = await this.prisma.productVariant.findMany({
-      where: { productId: BigInt(productId) },
+      where: { productId: Number(productId) },
       include: {
         variantAttributes: {
           include: {
@@ -894,11 +909,11 @@ export class ProductService {
 
   async updateVariant(id: string | number, dto: any) {
     const data: any = { ...dto };
-    if (dto.price !== undefined) data.price = dto.price.toString();
+    if (dto.price !== undefined) data.price = Number(dto.price);
     
     try {
       const variant = await this.prisma.productVariant.update({
-        where: { id: BigInt(id) },
+        where: { id: Number(id) },
         data,
       });
       return { success: true, data: variant };
@@ -921,7 +936,7 @@ export class ProductService {
       savedMedia.map((m, index) => 
         this.prisma.productMedia.create({
           data: {
-            productId: BigInt(productId),
+            productId: Number(productId),
             mediaId: m.data.id,
             type,
             sortOrder: index
@@ -942,7 +957,7 @@ export class ProductService {
       savedMedia.map((m, index) => 
         this.prisma.variantImage.create({
           data: {
-            variantId: BigInt(variantId),
+            variantId: Number(variantId),
             mediaId: m.data.id,
             type: type?.toUpperCase() || 'GALLERY',
             sortOrder: index
@@ -987,7 +1002,7 @@ export class ProductService {
   }
 
   async updateInventoryStock(variantId: string | number, qty: number, type: string, note?: string, adminId?: string) {
-    const vId = BigInt(variantId);
+    const vId = Number(variantId);
     const variant = await this.prisma.productVariant.findUnique({
       where: { id: vId },
     });
@@ -1014,7 +1029,7 @@ export class ProductService {
           newQuantity: newQty,
           reason: note,
           notes: note,
-          adminId: adminId ? BigInt(adminId) : null,
+          adminId: adminId ? Number(adminId) : null,
         },
       }),
     ]);
@@ -1022,3 +1037,5 @@ export class ProductService {
     return { success: true, data: updated };
   }
 }
+
+

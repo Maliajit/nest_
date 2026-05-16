@@ -85,3 +85,5 @@ export class CreateShipmentDto {
   @Type(() => ShipmentItemDto)
   items: ShipmentItemDto[];
 }
+
+

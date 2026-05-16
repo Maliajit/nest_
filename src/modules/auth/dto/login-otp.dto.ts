@@ -10,3 +10,5 @@ export class LoginOtpDto {
   @Length(4, 4)
   otp: string;
 }
+
+

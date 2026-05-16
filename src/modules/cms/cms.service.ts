@@ -5,6 +5,15 @@ import { PrismaService } from '../../prisma/prisma.service';
 export class CmsService {
   constructor(private prisma: PrismaService) {}
 
+  private parseJson(value: any, defaultValue: any = null): any {
+    if (!value || typeof value !== 'string') return value || defaultValue;
+    try {
+      return JSON.parse(value);
+    } catch (e) {
+      return defaultValue;
+    }
+  }
+
   // Fetch active banners filtered by position
   async getBanners(position?: string) {
     const where: any = { isActive: true };
@@ -31,6 +40,11 @@ export class CmsService {
         ]
       },
     });
+    return popups.map(p => ({
+      ...p,
+      data: this.parseJson(p.data, {}),
+      displayRules: this.parseJson(p.displayRules, {})
+    }));
   }
 
   // Admin Methods
@@ -97,7 +111,7 @@ export class CmsService {
     if (data.isActive !== undefined) updateData.isActive = data.isActive;
 
     const banner = await this.prisma.banner.update({
-      where: { id: BigInt(id) },
+      where: { id: Number(id) },
       data: updateData,
     });
     return { success: true, data: banner };
@@ -145,8 +159,8 @@ export class CmsService {
     return { success: true, data: testimonial };
   }
 
-  async deleteTestimonial(id: number | bigint) {
-    const tId = BigInt(id);
+  async deleteTestimonial(id: number | number) {
+    const tId = Number(id);
     await this.prisma.testimonial.delete({
       where: { id: tId },
     });
@@ -161,6 +175,7 @@ export class CmsService {
     // Frontend expects 'name' for 'title', 'status' for 'isActive', and 'order' for 'sortOrder'
     const mapped = list.map(s => ({
         ...s,
+        content: this.parseJson(s.content),
         name: s.title,
         status: s.isActive,
         order: s.sortOrder
@@ -180,8 +195,8 @@ export class CmsService {
     return { success: true, data: { ...section, name: section.title, status: section.isActive, order: section.sortOrder } };
   }
 
-  async updateHomeSection(id: number | bigint, data: any) {
-    const sId = BigInt(id);
+  async updateHomeSection(id: number | number, data: any) {
+    const sId = Number(id);
     const updateData: any = {};
     if (data.name !== undefined) updateData.title = data.name;
     if (data.type !== undefined) updateData.type = data.type;
@@ -195,11 +210,13 @@ export class CmsService {
     return { success: true, data: { ...section, name: section.title, status: section.isActive, order: section.sortOrder } };
   }
 
-  async deleteHomeSection(id: number | bigint) {
-    const sId = BigInt(id);
+  async deleteHomeSection(id: number | number) {
+    const sId = Number(id);
     await this.prisma.homeSection.delete({
       where: { id: sId },
     });
     return { success: true };
   }
 }
+
+

@@ -11,3 +11,5 @@ import { MediaModule } from '../media/media.module';
   providers: [ProductService, VariantGeneratorService],
 })
 export class ProductModule {}
+
+

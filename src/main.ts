@@ -3,14 +3,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
-import { BigIntInterceptor } from './common/interceptors/bigint.interceptor';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
-
-// Use a BigInt to JSON patch to avoid serialization errors (redundant with interceptor but helpful for direct JSON.stringify)
-(BigInt.prototype as any).toJSON = function () {
-  return this.toString();
-};
-
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
 
@@ -37,7 +30,6 @@ async function bootstrap() {
   }));
 
   // Global interceptors
-  app.useGlobalInterceptors(new BigIntInterceptor());
   app.useGlobalInterceptors(new ResponseInterceptor());
 
   // Swagger Documentation
