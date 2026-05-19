@@ -97,6 +97,32 @@ export class CmsController {
   async deleteHomeSection(@Param('id') id: string) {
     return this.cmsService.deleteHomeSection(Number(id));
   }
+
+  // Community Images (Atelier Chronicles)
+  @Get('community-images')
+  async getCommunityImages() {
+    return this.cmsService.getCommunityImages();
+  }
+
+  @Get('community-images/all')
+  async getAllCommunityImages() {
+    return this.cmsService.getAllCommunityImages();
+  }
+
+  @Post('community-images')
+  async createCommunityImage(@Body() data: any) {
+    return this.cmsService.createCommunityImage(data);
+  }
+
+  @Put('community-images/:id')
+  async updateCommunityImage(@Param('id') id: string, @Body() data: any) {
+    return this.cmsService.updateCommunityImage(Number(id), data);
+  }
+
+  @Delete('community-images/:id')
+  async deleteCommunityImage(@Param('id') id: string) {
+    return this.cmsService.deleteCommunityImage(Number(id));
+  }
 }
 
 

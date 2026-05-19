@@ -1420,6 +1420,20 @@ model Testimonial {
   @@map("testimonials")
 }
 
+model CommunityImage {
+  id        Int       @id @default(autoincrement())
+  title     String?
+  image     String
+  sortOrder Int       @default(0) @map("sort_order")
+  isActive  Boolean   @default(true) @map("is_active")
+  createdAt DateTime? @default(now()) @map("created_at")
+  updatedAt DateTime? @updatedAt @map("updated_at")
+
+  @@index([isActive], map: "community_images_is_active_index")
+  @@index([sortOrder], map: "community_images_sort_order_index")
+  @@map("community_images")
+}
+
 model Notification {
   id             Int                @id @default(autoincrement())
   templateId     Int?               @map("template_id")
@@ -1946,6 +1960,7 @@ model Offer {
   code              String?
   status            Int              @default(1)
   offerType         String           @map("offer_type")
+  couponType        String           @default("public") @map("coupon_type")
   discountValue     Float?         @map("discount_value")
   buyQty            Int?             @map("buy_qty")
   getQty            Int?             @map("get_qty")

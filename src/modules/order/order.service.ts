@@ -118,7 +118,7 @@ export class OrderService {
 
       const order = await tx.order.create({
         data: {
-          customer: { connect: { id: cId } },
+          customer: cId ? { connect: { id: cId } } : undefined,
           offer: appliedOffer ? { connect: { id: appliedOffer.id } } : undefined,
           status: 'pending',
           paymentStatus: isOnline ? 'paid' : 'pending',
@@ -131,7 +131,7 @@ export class OrderService {
           grandTotal: Number(Math.max(0, subtotal + shippingTotal - totalDiscount)),
           customerNote: dto.notes,
           customerFirstName: cart.customer?.name?.split(' ')[0] || 'Customer',
-          customerLastName: cart.customer?.name?.split(' ').slice(1).join(' ') || 'Name',
+          customerLastName: cart.customer?.name?.split(' ')?.slice(1)?.join(' ') || 'Name',
           customerMobile: cart.customer?.mobile || '',
           customerDob: dto.dob ? new Date(dto.dob) : (cart.customer?.dob || null),
           orderNumber: `ORD-${Date.now()}`,
@@ -179,7 +179,7 @@ export class OrderService {
           order: { connect: { id: order.id } },
           type: 'shipping',
           firstName: shippingAddr.name?.split(' ')[0] || 'Customer',
-          lastName: shippingAddr.name?.split(' ').slice(1).join(' ') || 'Name',
+          lastName: shippingAddr.name?.split(' ')?.slice(1)?.join(' ') || 'Name',
           email: cart.customer?.email || '',
           phone: shippingAddr.mobile,
           address1: shippingAddr.address,
@@ -479,18 +479,18 @@ export class OrderService {
     return { success: true, data: order };
   }
 
-  async calculateOrderTotal(customerId: string, pincode?: string) {
+  async calculateOrderTotal(customerId: string, pincode?: string, couponCode?: string) {
     const customerIdStr = customerId?.toString() || '';
     const isNumeric = !isNaN(Number(customerIdStr)) && !customerIdStr.includes('usr_') && customerIdStr !== '';
     const cId = isNumeric ? Number(customerIdStr) : null;
 
     const cart = await this.prisma.cart.findFirst({
       where: cId ? { customerId: cId, status: 'active' } : { sessionId: customerIdStr, status: 'active' },
-      include: { items: { include: { productVariant: true } } }
+      include: { items: { include: { productVariant: true } }, offer: true }
     });
 
     if (!cart || cart.items.length === 0) {
-      return { subtotal: 0, shipping: 0, tax: 0, total: 0 };
+      return { subtotal: 0, shipping: 0, tax: 0, discount: 0, total: 0 };
     }
 
     const subtotal = cart.subtotal ? Number(cart.subtotal) : 0;
@@ -508,11 +508,28 @@ export class OrderService {
       }
     }
 
+    let discount = 0;
+    let appliedOffer = cart.offer;
+
+    if (couponCode) {
+      try {
+        appliedOffer = await this.marketingService.validateCoupon(customerId, couponCode, subtotal);
+      } catch (e) {
+        this.logger.error(`Invalid coupon: ${e.message}`);
+        appliedOffer = null; // Ignore invalid coupon
+      }
+    }
+
+    if (appliedOffer) {
+      discount = this.marketingService.calculateDiscount(appliedOffer, subtotal);
+    }
+
     return {
       subtotal,
       shipping: shippingTotal,
       tax: 0,
-      total: subtotal + shippingTotal,
+      discount,
+      total: Math.max(0, subtotal + shippingTotal - discount),
       message
     };
   }

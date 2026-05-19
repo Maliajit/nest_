@@ -61,7 +61,27 @@ export class AuthService {
       return null;
     }
 
-    const customer = await this.prisma.customer.findUnique({ where: { mobile } });
+    let customer = await this.prisma.customer.findUnique({ where: { mobile } });
+
+    if (!customer) {
+      const generatedEmail = `${mobile}@fylexx.com`;
+      const generatedName = `User ${mobile}`;
+      const hashedPassword = await bcrypt.hash(`OTP_1234_${mobile}`, 10);
+      try {
+        customer = await this.prisma.customer.create({
+          data: {
+            email: generatedEmail,
+            name: generatedName,
+            mobile,
+            password: hashedPassword,
+            status: 1,
+          },
+        });
+      } catch (error) {
+        console.error('Failed to auto-create customer:', error);
+        return null;
+      }
+    }
 
     if (customer) {
       return this.sanitizeUser(customer, 'customer');

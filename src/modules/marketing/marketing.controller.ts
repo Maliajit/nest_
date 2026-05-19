@@ -36,6 +36,11 @@ export class MarketingController {
   }
 
   // Offer CRUD for Admin
+  @Get('offers/analytics')
+  async getOffersAnalytics() {
+    return this.marketingService.getAnalyticsDashboard();
+  }
+
   @Get('offers')
   async getOffers() {
     return this.marketingService.getAllOffers();

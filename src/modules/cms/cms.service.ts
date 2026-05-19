@@ -28,7 +28,7 @@ export class CmsService {
   // Fetch active popups
   async getActivePopups() {
     const now = new Date();
-    return this.prisma.popup.findMany({
+    const popups = await this.prisma.popup.findMany({
       where: {
         isActive: true,
         OR: [
@@ -42,8 +42,8 @@ export class CmsService {
     });
     return popups.map(p => ({
       ...p,
-      data: this.parseJson(p.data, {}),
-      displayRules: this.parseJson(p.displayRules, {})
+      data: this.parseJson((p as any).data, {}),
+      displayRules: this.parseJson((p as any).displayRules, {})
     }));
   }
 
@@ -90,11 +90,13 @@ export class CmsService {
         data: {
             name: data.name || data.title || 'Untitled Banner',
             title: data.title,
+            subtitle: data.subtitle,
+            content: data.content,
             image: data.image,
             link: data.link,
             position: data.position || 'main',
             sortOrder: Number(data.sortOrder) || 0,
-            isActive: data.isActive ?? true,
+            isActive: data.isActive !== undefined ? data.isActive : (data.status ? (data.status === 'active' || data.status === 'true') : true),
         }
     });
     return { success: true, data: banner };
@@ -104,11 +106,17 @@ export class CmsService {
     const updateData: any = {};
     if (data.name !== undefined) updateData.name = data.name;
     if (data.title !== undefined) updateData.title = data.title;
+    if (data.subtitle !== undefined) updateData.subtitle = data.subtitle;
+    if (data.content !== undefined) updateData.content = data.content;
     if (data.image !== undefined) updateData.image = data.image;
     if (data.link !== undefined) updateData.link = data.link;
     if (data.position !== undefined) updateData.position = data.position;
     if (data.sortOrder !== undefined) updateData.sortOrder = Number(data.sortOrder);
-    if (data.isActive !== undefined) updateData.isActive = data.isActive;
+    if (data.isActive !== undefined) {
+      updateData.isActive = data.isActive;
+    } else if (data.status !== undefined) {
+      updateData.isActive = data.status === 'active' || data.status === 'true' || data.status === true;
+    }
 
     const banner = await this.prisma.banner.update({
       where: { id: Number(id) },
@@ -215,6 +223,53 @@ export class CmsService {
     await this.prisma.homeSection.delete({
       where: { id: sId },
     });
+    return { success: true };
+  }
+
+  // Community Images (Atelier Chronicles)
+  async getCommunityImages() {
+    const images = await this.prisma.communityImage.findMany({
+      where: { isActive: true },
+      orderBy: { sortOrder: 'asc' },
+    });
+    return { success: true, data: images };
+  }
+
+  async getAllCommunityImages() {
+    const images = await this.prisma.communityImage.findMany({
+      orderBy: { sortOrder: 'asc' },
+    });
+    return { success: true, data: images };
+  }
+
+  async createCommunityImage(data: any) {
+    const image = await this.prisma.communityImage.create({
+      data: {
+        title: data.title || null,
+        image: data.image,
+        sortOrder: Number(data.sortOrder) || 0,
+        isActive: data.isActive !== undefined ? data.isActive : true,
+      },
+    });
+    return { success: true, data: image };
+  }
+
+  async updateCommunityImage(id: number, data: any) {
+    const updateData: any = {};
+    if (data.title !== undefined) updateData.title = data.title;
+    if (data.image !== undefined) updateData.image = data.image;
+    if (data.sortOrder !== undefined) updateData.sortOrder = Number(data.sortOrder);
+    if (data.isActive !== undefined) updateData.isActive = data.isActive === true || data.isActive === 'true';
+
+    const image = await this.prisma.communityImage.update({
+      where: { id: Number(id) },
+      data: updateData,
+    });
+    return { success: true, data: image };
+  }
+
+  async deleteCommunityImage(id: number) {
+    await this.prisma.communityImage.delete({ where: { id: Number(id) } });
     return { success: true };
   }
 }

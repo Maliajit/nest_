@@ -6,9 +6,9 @@ export class CheckoutDto {
   @IsString()
   shippingAddressId: string;
 
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
-  billingAddressId: string;
+  billingAddressId?: string;
 
   @IsOptional()
   @IsString()

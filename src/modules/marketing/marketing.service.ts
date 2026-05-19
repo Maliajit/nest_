@@ -48,6 +48,11 @@ export class MarketingService {
       }
     }
 
+    // 5. One-Time Coupon check
+    if (offer.couponType === 'one_time' && offer.usedCount >= 1) {
+      throw new BadRequestException('This one-time coupon has already been used');
+    }
+
     return {
       ...offer,
       isActive: offer.status === 1
@@ -60,15 +65,64 @@ export class MarketingService {
       orderBy: { createdAt: 'desc' },
       include: {
         categories: { include: { category: true } },
+        usages: {
+          include: { order: true }
+        }
       }
     });
 
-    const mapped = offers.map(offer => ({
-      ...offer,
-      isActive: offer.status === 1,
-    }));
+    const mapped = offers.map(offer => {
+      // Calculate per-coupon analytics
+      const totalDiscountGiven = offer.usages.reduce((sum, u) => sum + (Number(u.discountAmount) || 0), 0);
+      const totalRevenue = offer.usages.reduce((sum, u) => sum + (u.order ? Number(u.order.grandTotal) : 0), 0);
+      
+      const { usages, ...rest } = offer; // remove usages from response to keep payload light, maybe? Or keep it if frontend needs it. Wait, frontend needs usages for the drawer.
+      
+      return {
+        ...offer, // keep usages for the modal
+        isActive: offer.status === 1,
+        analytics: {
+          totalUses: offer.usages.length,
+          discountSum: totalDiscountGiven,
+          revenueSum: totalRevenue
+        }
+      };
+    });
 
     return { success: true, data: mapped };
+  }
+
+  async getAnalyticsDashboard() {
+    const offers = await this.prisma.offer.findMany({
+      include: {
+        usages: {
+          include: { order: true }
+        }
+      }
+    });
+
+    let totalCoupons = offers.length;
+    let activeCoupons = offers.filter(o => o.status === 1).length;
+    let totalUses = 0;
+    let totalDiscountGiven = 0;
+    let totalRevenueGenerated = 0;
+
+    for (const offer of offers) {
+      totalUses += offer.usages.length;
+      totalDiscountGiven += offer.usages.reduce((sum, u) => sum + (Number(u.discountAmount) || 0), 0);
+      totalRevenueGenerated += offer.usages.reduce((sum, u) => sum + (u.order ? Number(u.order.grandTotal) : 0), 0);
+    }
+
+    return {
+      success: true,
+      data: {
+        totalCoupons,
+        activeCoupons,
+        totalUses,
+        totalDiscountGiven,
+        totalRevenueGenerated
+      }
+    };
   }
 
   async getOfferById(id: string | number) {
@@ -99,6 +153,7 @@ export class MarketingService {
       code: data.code,
       status: status,
       offerType: data.offerType || data.type || 'percentage',
+      couponType: data.couponType || 'public',
       discountValue: Number(data.discountValue || 0),
       minCartAmount: data.minCartAmount ? Number(data.minCartAmount) : null,
       maxCartAmount: data.maxCartAmount ? Number(data.maxCartAmount) : null,
@@ -147,6 +202,7 @@ export class MarketingService {
     if (data.code !== undefined) payload.code = data.code;
     if (status !== undefined) payload.status = status;
     if (data.offerType !== undefined || data.type !== undefined) payload.offerType = data.offerType || data.type;
+    if (data.couponType !== undefined) payload.couponType = data.couponType;
     if (data.discountValue !== undefined) payload.discountValue = Number(data.discountValue);
     if (data.minCartAmount !== undefined) payload.minCartAmount = data.minCartAmount ? Number(data.minCartAmount) : null;
     if (data.maxCartAmount !== undefined) payload.maxCartAmount = data.maxCartAmount ? Number(data.maxCartAmount) : null;

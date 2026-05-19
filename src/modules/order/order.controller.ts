@@ -39,8 +39,12 @@ export class OrderController {
   }
 
   @Post('calculate-total')
-  async calculateTotal(@Body('customerId') customerId: string, @Body('pincode') pincode?: string) {
-    return this.orderService.calculateOrderTotal(customerId, pincode);
+  async calculateTotal(
+    @Body('customerId') customerId: string, 
+    @Body('pincode') pincode?: string,
+    @Body('couponCode') couponCode?: string
+  ) {
+    return this.orderService.calculateOrderTotal(customerId, pincode, couponCode);
   }
 }
 
