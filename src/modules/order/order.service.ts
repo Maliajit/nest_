@@ -314,6 +314,20 @@ export class OrderService {
     });
   }
 
+  // Update Payment Status (Admin)
+  async updatePaymentStatus(orderId: string, paymentStatus: string, notes?: string) {
+    const oId = Number(orderId);
+    const order = await this.prisma.order.findUnique({ where: { id: oId } });
+    if (!order) throw new NotFoundException('Order not found');
+
+    const updatedOrder = await this.prisma.order.update({
+      where: { id: oId },
+      data: { paymentStatus },
+    });
+
+    return { success: true, data: updatedOrder };
+  }
+
   // Cancel Order (Customer)
   async cancelOrder(customerId: string, orderId: string, reason: string) {
     const cId = Number(customerId);
