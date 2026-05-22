@@ -94,6 +94,7 @@ export class CmsService {
             content: data.content,
             image: data.image,
             link: data.link,
+            textColor: data.textColor,
             position: data.position || 'main',
             sortOrder: Number(data.sortOrder) || 0,
             isActive: data.isActive !== undefined ? data.isActive : (data.status ? (data.status === 'active' || data.status === 'true') : true),
@@ -110,6 +111,7 @@ export class CmsService {
     if (data.content !== undefined) updateData.content = data.content;
     if (data.image !== undefined) updateData.image = data.image;
     if (data.link !== undefined) updateData.link = data.link;
+    if (data.textColor !== undefined) updateData.textColor = data.textColor;
     if (data.position !== undefined) updateData.position = data.position;
     if (data.sortOrder !== undefined) updateData.sortOrder = Number(data.sortOrder);
     if (data.isActive !== undefined) {

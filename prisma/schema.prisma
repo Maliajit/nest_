@@ -1260,6 +1260,7 @@ model Banner {
   link      String?
   ctaText   String?   @map("cta_text")
   ctaLink   String?   @map("cta_link")
+  textColor String?   @map("text_color")
   type      String    @default("image")
   position  String?
   isActive  Boolean   @default(true) @map("is_active")
