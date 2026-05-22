@@ -542,12 +542,15 @@ export class OrderService {
     let discount = 0;
     let appliedOffer = cart.offer;
 
+    let couponError = null;
+
     if (couponCode) {
       try {
         appliedOffer = await this.marketingService.validateCoupon(customerId, couponCode, subtotal);
       } catch (e) {
         this.logger.error(`Invalid coupon: ${e.message}`);
         appliedOffer = null; // Ignore invalid coupon
+        couponError = e.message;
       }
     }
 
@@ -561,7 +564,8 @@ export class OrderService {
       tax: 0,
       discount,
       total: Math.max(0, subtotal + shippingTotal - discount),
-      message
+      message,
+      couponError
     };
   }
 
