@@ -439,17 +439,37 @@ export class CustomerService {
 
   async updateCustomer(id: string | number, data: any) {
     const cId = Number(id);
+    const updatePayload = { ...data };
+
+    if (updatePayload.isActive !== undefined) {
+      updatePayload.status = updatePayload.isActive ? 1 : 0;
+      delete updatePayload.isActive;
+    }
+
+    if (updatePayload.isBlocked !== undefined) {
+      updatePayload.isBlock = updatePayload.isBlocked;
+      delete updatePayload.isBlocked;
+    }
+
     const updated = await this.prisma.customer.update({
       where: { id: cId },
-      data: {
-        ...data,
-        status: data.isActive !== undefined ? (data.isActive ? 1 : 0) : data.status,
-        isBlock: data.isBlocked !== undefined ? data.isBlocked : data.isBlock,
-      },
+      data: updatePayload,
     });
 
     const { password: _, ...result } = updated as any;
     return { success: true, data: { ...result, isActive: result.status === 1, isBlocked: result.isBlock } };
+  }
+
+  async deleteCustomer(id: string | number) {
+    const cId = Number(id);
+    try {
+      await this.prisma.customer.delete({
+        where: { id: cId },
+      });
+      return { success: true, message: 'User deleted successfully' };
+    } catch (e) {
+      return { success: false, error: 'Cannot delete user: They have existing orders or linked data.' };
+    }
   }
 }
 

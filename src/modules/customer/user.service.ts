@@ -17,6 +17,13 @@ export class UserService {
     // Basic implementation to satisfy the controller
     return { success: true, message: 'User creation not fully implemented', data: createUserDto };
   }
-}
 
+  async update(id: string, updateUserDto: any) {
+    return this.customerService.updateCustomer(id, updateUserDto);
+  }
+
+  async remove(id: string) {
+    return this.customerService.deleteCustomer(id);
+  }
+}
 
