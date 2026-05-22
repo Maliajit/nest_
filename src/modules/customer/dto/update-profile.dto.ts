@@ -10,8 +10,8 @@ export class UpdateProfileDto {
   mobile?: string;
 
   @IsOptional()
-  @IsDateString()
-  dob?: string;
+  @IsString()
+  address?: string;
 }
 
 

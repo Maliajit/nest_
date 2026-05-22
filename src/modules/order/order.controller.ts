@@ -60,6 +60,11 @@ export class OrderController {
   async cancelOrder(@Body('customerId') customerId: string, @Param('id') id: string, @Body('reason') reason: string) {
     return this.orderService.cancelOrder(customerId, id, reason);
   }
+
+  @Delete(':id')
+  async deleteOrder(@Param('id') id: string) {
+    return this.orderService.deleteOrder(id);
+  }
 }
 
 

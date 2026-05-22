@@ -388,6 +388,23 @@ export class OrderService {
     });
   }
 
+  // Delete Order (Admin)
+  async deleteOrder(orderId: string) {
+    const oId = Number(orderId);
+    const order = await this.prisma.order.findUnique({ where: { id: oId } });
+    if (!order) throw new NotFoundException('Order not found');
+
+    return this.prisma.$transaction(async (tx) => {
+      // Clean up dependencies
+      await tx.orderItem.deleteMany({ where: { orderId: oId } });
+      await tx.orderAddress.deleteMany({ where: { orderId: oId } });
+      await tx.orderStatusHistory.deleteMany({ where: { orderId: oId } });
+      await tx.payment.deleteMany({ where: { orderId: oId } });
+      
+      const deletedOrder = await tx.order.delete({ where: { id: oId } });
+      return { success: true, data: deletedOrder };
+    });
+  }
 
   // Get all orders (Admin)
   async getAllOrders() {

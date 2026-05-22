@@ -126,7 +126,7 @@ export class CustomerService {
         name: customer.name,
         email: customer.email || '',
         mobile: customer.mobile || null,
-        dob: this.toIsoString(customer.dob),
+        address: customer.address || '',
         status: customer.status === 1 && !customer.isBlock ? 'ACTIVE' : 'INACTIVE',
         isBlock: !!customer.isBlock,
         createdAt: this.toIsoString(customer.createdAt),
@@ -388,7 +388,7 @@ export class CustomerService {
       data: {
         name: data.name,
         mobile: data.mobile || null,
-        dob: data.dob ? new Date(data.dob) : null,
+        address: data.address || null,
       },
     });
 
@@ -398,7 +398,7 @@ export class CustomerService {
       name: result.name,
       email: result.email || '',
       mobile: result.mobile || null,
-      dob: this.toIsoString(result.dob),
+      address: result.address || '',
       status: result.status === 1 && !result.isBlock ? 'ACTIVE' : 'INACTIVE',
       isBlock: !!result.isBlock,
       createdAt: this.toIsoString(result.createdAt),
