@@ -44,11 +44,14 @@ export class CustomerService {
 
   private toMediaUrl(path?: string | null) {
     if (!path) return null;
-    if (path.startsWith('http://') || path.startsWith('https://')) {
+    if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('/assets/')) {
       return path;
     }
 
-    const normalized = path.replace(/\\/g, '/');
+    let normalized = path.replace(/\\/g, '/');
+    if (!normalized.startsWith('/uploads/')) {
+      normalized = normalized.startsWith('/') ? `/uploads${normalized}` : `/uploads/${normalized}`;
+    }
     const prefix = normalized.startsWith('/') ? '' : '/';
     return `${this.getApiBaseUrl()}${prefix}${normalized}`;
   }
