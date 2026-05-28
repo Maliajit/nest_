@@ -1,4 +1,4 @@
-﻿-- CreateTable
+-- CreateTable
 CREATE TABLE "cache" (
     "key" TEXT NOT NULL,
     "value" TEXT NOT NULL,
