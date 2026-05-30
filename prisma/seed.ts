@@ -7,7 +7,7 @@ async function main() {
   console.log('🌱 Starting Unified Database Seeding...');
 
   // 1. Create Admins
-  const adminPassword = 'password123';
+  const adminPassword = 'fylex@123';
   const hashedPassword = await bcrypt.hash(adminPassword, 10);
   await prisma.admin.upsert({
     where: { email: 'admin@fylex.com' },
@@ -15,7 +15,7 @@ async function main() {
     create: { name: 'Fylex Admin', email: 'admin@fylex.com', password: hashedPassword, role: 'admin', status: 1 },
   });
 
-  const admin2Password = 'admin@123';
+  const admin2Password = 'fylex@123';
   const admin2HashedPassword = await bcrypt.hash(admin2Password, 10);
   await prisma.admin.upsert({
     where: { email: 'admin@gmail.com' },
