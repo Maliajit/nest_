@@ -92,6 +92,9 @@ export class UpdateProductDto {
 
 
   @IsOptional()
+  brandId?: number | string;
+
+  @IsOptional()
   mainCategoryId?: number | string;
 
   @IsOptional()

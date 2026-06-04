@@ -96,6 +96,9 @@ export class CreateProductDto {
 
 
   @IsOptional()
+  brandId?: number | string;
+
+  @IsOptional()
   mainCategoryId?: number | string;
 
   @IsOptional()
