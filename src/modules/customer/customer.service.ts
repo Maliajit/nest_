@@ -42,14 +42,16 @@ export class CustomerService {
     return 'PENDING';
   }
 
-  private toMediaUrl(path?: string | null) {
+  private toMediaUrl(path: string) {
     if (!path) return null;
-    if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('/assets/')) {
+    if (path.startsWith('http') || path.startsWith('data:')) {
       return path;
     }
 
     let normalized = path.replace(/\\/g, '/');
-    if (!normalized.startsWith('/uploads/')) {
+    if (normalized.startsWith('uploads/')) {
+      normalized = '/' + normalized;
+    } else if (!normalized.startsWith('/uploads/')) {
       normalized = normalized.startsWith('/') ? `/uploads${normalized}` : `/uploads/${normalized}`;
     }
     const prefix = normalized.startsWith('/') ? '' : '/';
