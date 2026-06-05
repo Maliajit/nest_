@@ -17,6 +17,9 @@ export class RegisterDto {
   @IsNotEmpty()
   @MinLength(4)
   otp: string;
+
+  @IsOptional()
+  address?: string;
 }
 
 

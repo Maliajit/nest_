@@ -15,9 +15,9 @@ export class AuthController {
   @Post('register')
   async register(@Body() registerDto: RegisterDto) {
     this.logger.log(`Register request received for email=${registerDto.email}`);
-    const result = await this.authService.registerCustomer(registerDto);
+    const user = await this.authService.registerCustomer(registerDto);
     this.logger.log(`Register success for email=${registerDto.email}`);
-    return result;
+    return await this.authService.login(user);
   }
 
   @Post('login')
@@ -58,6 +58,17 @@ export class AuthController {
     const result = await this.authService.resetCustomerPassword(resetPasswordDto);
     this.logger.log(`Password reset success for email=${resetPasswordDto.email}`);
     return result;
+  }
+
+  @Post('check-mobile')
+  @HttpCode(HttpStatus.OK)
+  async checkMobile(@Body() body: { mobile: string }) {
+    this.logger.log(`Check mobile request for mobile=${body.mobile}`);
+    const exists = await this.authService.checkMobileExists(body.mobile);
+    if (!exists) {
+      throw new UnauthorizedException('Mobile number not registered. Please sign up first.');
+    }
+    return { success: true };
   }
 
   @Post('admin/login')

@@ -61,33 +61,13 @@ export class AuthService {
       return null;
     }
 
-    let customer = await this.prisma.customer.findUnique({ where: { mobile } });
+    const customer = await this.prisma.customer.findUnique({ where: { mobile } });
 
     if (!customer) {
-      const generatedEmail = `${mobile}@fylexx.com`;
-      const generatedName = `User ${mobile}`;
-      const hashedPassword = await bcrypt.hash(`OTP_1234_${mobile}`, 10);
-      try {
-        customer = await this.prisma.customer.create({
-          data: {
-            email: generatedEmail,
-            name: generatedName,
-            mobile,
-            password: hashedPassword,
-            status: 1,
-          },
-        });
-      } catch (error) {
-        console.error('Failed to auto-create customer:', error);
-        return null;
-      }
+      return null;
     }
 
-    if (customer) {
-      return this.sanitizeUser(customer, 'customer');
-    }
-
-    return null;
+    return this.sanitizeUser(customer, 'customer');
   }
 
   async login(user: any) {
@@ -135,8 +115,8 @@ export class AuthService {
     return this.sanitizeUser(customer, 'customer');
   }
 
-  async registerCustomer(registerDto: RegisterDto) {
-    const { email, password, name, mobile, otp } = registerDto;
+  async registerCustomer(dto: RegisterDto) {
+    const { email, password, name, mobile, otp, address } = dto;
 
     if (otp !== '1234') {
       throw new BadRequestException('Invalid OTP');
@@ -166,6 +146,7 @@ export class AuthService {
           email,
           name,
           mobile,
+          address,
           password: hashedPassword,
           status: 1,
         },
@@ -213,6 +194,11 @@ export class AuthService {
     }
 
     throw new UnauthorizedException('Invalid admin credentials');
+  }
+
+  async checkMobileExists(mobile: string) {
+    const customer = await this.prisma.customer.findUnique({ where: { mobile } });
+    return !!customer;
   }
 }
 
