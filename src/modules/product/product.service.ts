@@ -113,7 +113,7 @@ export class ProductService {
       metaTitle: data.metaTitle,
       metaDescription: data.metaDescription,
       metaKeywords: data.metaKeywords,
-      images: data.images || JSON.stringify((dto as any).gallery?.map((g: any) => g.url) || []),
+      images: typeof data.images === 'string' ? data.images : JSON.stringify(data.images || (dto as any).gallery?.map((g: any) => g.url) || []),
 
       mainCategoryId: data.mainCategoryId || (dto as any).categoryId,
       taxClassId: data.taxClassId,
@@ -628,6 +628,8 @@ export class ProductService {
         prismaData.images = JSON.stringify(savedMedia.map(m => `/uploads/${m.data.fileName}`));
       } else if (gallery) {
         prismaData.images = JSON.stringify(gallery.map((g: any) => typeof g === 'string' ? g : g.url));
+      } else if (prismaData.images !== undefined && typeof prismaData.images !== 'string') {
+        prismaData.images = JSON.stringify(prismaData.images);
       }
 
       const validFields = [
