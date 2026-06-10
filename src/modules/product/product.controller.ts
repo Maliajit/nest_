@@ -137,6 +137,11 @@ export class ProductController {
 export class VariantController {
   constructor(private readonly productService: ProductService) {}
 
+  @Get()
+  async getAllVariants(@Query('page') page: string = '1', @Query('limit') limit: string = '50') {
+    return this.productService.getAllVariants(Number(page), Number(limit));
+  }
+
   @Patch(':id')
   async updateVariant(@Param('id') id: string, @Body() body: any) {
     return this.productService.updateVariant(id, body);

@@ -128,9 +128,9 @@ export class ShiprocketService {
       // Technical failure -> Allow ONLY Prepaid for safety
       return {
         serviceable: null, 
-        codAvailable: false, // Force false on API error for risk mitigation
+        codAvailable: true, // Force true to allow COD on API error
         rate: 500,
-        message: "Technical issue: COD disabled, shipping estimated"
+        message: "Technical issue: COD enabled, shipping estimated"
       };
     }
   }

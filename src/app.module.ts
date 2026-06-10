@@ -17,6 +17,7 @@ import { CartModule } from './modules/cart/cart.module';
 import { WishlistModule } from './modules/wishlist/wishlist.module';
 import { FeedbackModule } from './modules/feedback/feedback.module';
 import { PaymentModule } from './modules/payment/payment.module';
+import { ReportsModule } from './modules/reports/reports.module';
 
 import { AttributeModule } from './modules/product/attribute/attribute.module';
 import { SpecificationModule } from './modules/product/specification/specification.module';
@@ -41,6 +42,7 @@ import { SpecificationModule } from './modules/product/specification/specificati
     WishlistModule,
     FeedbackModule,
     PaymentModule,
+    ReportsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

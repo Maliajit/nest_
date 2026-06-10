@@ -958,7 +958,7 @@ model ShippingMethod {
   name        String
   code        String           @unique(map: "shipping_methods_code_unique")
   description String?
-  config      String?
+  config      Json?
   isActive    Boolean          @default(true) @map("is_active")
   sortOrder   Int              @default(0) @map("sort_order")
   createdAt   DateTime?        @map("created_at")

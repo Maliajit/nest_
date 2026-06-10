@@ -909,6 +909,41 @@ export class ProductService {
     return { success: true, data: variants };
   }
 
+  async getAllVariants(page: number = 1, limit: number = 50) {
+    const skip = (page - 1) * limit;
+    
+    const [total, variants] = await Promise.all([
+      this.prisma.productVariant.count(),
+      this.prisma.productVariant.findMany({
+        skip,
+        take: limit,
+        include: {
+          product: { select: { name: true, sku: true } },
+          variantAttributes: {
+            include: {
+              attributeValue: {
+                include: { attribute: true }
+              }
+            }
+          },
+          variantImages: {
+            include: { media: true }
+          }
+        }
+      })
+    ]);
+
+    return { 
+      success: true, 
+      data: variants,
+      meta: {
+        total,
+        page,
+        lastPage: Math.ceil(total / limit)
+      }
+    };
+  }
+
   async updateVariant(id: string | number, dto: any) {
     const data: any = { ...dto };
     if (dto.price !== undefined) data.price = Number(dto.price);
