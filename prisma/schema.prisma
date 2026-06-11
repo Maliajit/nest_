@@ -699,6 +699,7 @@ model Product {
   stockHistories      StockHistory[]
   upSellsTo           UpSellProduct[]        @relation("ProductUpSell")
   upSellsFrom         UpSellProduct[]        @relation("ProductUpSellTargets")
+  productCareSteps    ProductCareStep[]
 
   @@index([status], map: "products_status_index")
   @@index([brandId], map: "products_brand_id_foreign")
@@ -2186,4 +2187,32 @@ model ProductReview {
   @@index([productId], map: "product_reviews_product_id_foreign")
   @@index([customerId], map: "product_reviews_customer_id_foreign")
   @@map("product_reviews")
+}
+
+model Faq {
+  id        Int      @id @default(autoincrement())
+  question  String
+  answer    String   @db.Text
+  sortOrder Int      @default(0) @map("sort_order")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("faqs")
+}
+
+model ProductCareStep {
+  id          Int      @id @default(autoincrement())
+  productId   Int      @map("product_id")
+  stepNumber  Int      @map("step_number")
+  title       String
+  description String   @db.Text
+  imageUrl    String?  @map("image_url")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@map("product_care_steps")
 }

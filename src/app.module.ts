@@ -21,6 +21,8 @@ import { ReportsModule } from './modules/reports/reports.module';
 
 import { AttributeModule } from './modules/product/attribute/attribute.module';
 import { SpecificationModule } from './modules/product/specification/specification.module';
+import { FaqModule } from './modules/content/faq/faq.module';
+import { PolicyModule } from './policy/policy.module';
 
 @Module({
   imports: [
@@ -43,6 +45,8 @@ import { SpecificationModule } from './modules/product/specification/specificati
     FeedbackModule,
     PaymentModule,
     ReportsModule,
+    FaqModule,
+    PolicyModule,
   ],
   controllers: [AppController],
   providers: [AppService],

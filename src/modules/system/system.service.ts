@@ -220,11 +220,23 @@ export class SystemService {
   }
 
   async updateSettings(data: any) {
-    const updates = Object.entries(data).map(([key, value]) => {
-      return this.prisma.setting.updateMany({
-        where: { key },
-        data: { value: String(value) },
-      });
+    const updates = Object.entries(data).map(async ([key, value]) => {
+      const existing = await this.prisma.setting.findFirst({ where: { key } });
+      if (existing) {
+        return this.prisma.setting.update({
+          where: { id: existing.id },
+          data: { value: String(value) },
+        });
+      } else {
+        return this.prisma.setting.create({
+          data: {
+            key,
+            value: String(value),
+            label: key,
+            group: 'shop_page',
+          }
+        });
+      }
     });
     await Promise.all(updates);
     return { success: true };
