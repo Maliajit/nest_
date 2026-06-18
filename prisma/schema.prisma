@@ -1642,6 +1642,7 @@ model OrderShipment {
   weight            Float?
   dimensions        String?
   shippingLabel     String?             @map("shipping_label")
+  trackingUrl       String?             @map("tracking_url")
   shippedAt         DateTime?           @map("shipped_at")
   estimatedDelivery DateTime?           @map("estimated_delivery")
   deliveredAt       DateTime?           @map("delivered_at")

@@ -66,7 +66,17 @@ export class OrderService {
       throw new BadRequestException('Invalid shipping address');
     }
 
-    // 5. Create Order via Transaction
+    // 5. Pre-flight Stock Validation
+    for (const item of cart.items) {
+      const variant = item.productVariant;
+      if (variant && variant.manageStock) {
+        if (!variant.inStock || variant.qty < item.quantity) {
+          throw new BadRequestException(`Item "${variant.product?.name || variant.sku}" is out of stock or requested quantity exceeds available stock.`);
+        }
+      }
+    }
+
+    // 6. Create Order via Transaction
     return this.prisma.$transaction(async (tx) => {
       const subtotal = Number(cart.subtotal);
       const discountAmount = appliedOffer ? this.marketingService.calculateDiscount(appliedOffer, subtotal) : 0;
@@ -190,7 +200,7 @@ export class OrderService {
         },
       });
 
-      // d. Create Items
+      // d. Create Items and Deduct Stock
       for (const item of cart.items) {
         await tx.orderItem.create({
           data: {
@@ -207,6 +217,21 @@ export class OrderService {
             attributes: item.attributes as any,
           },
         });
+
+        // Deduct inventory
+        const variant = item.productVariant;
+        if (variant && variant.manageStock) {
+          const newQty = Math.max(0, variant.qty - item.quantity);
+          const newInStock = newQty > 0;
+          await tx.productVariant.update({
+            where: { id: variant.id },
+            data: { 
+              qty: newQty, 
+              inStock: newInStock,
+              stockStatus: newInStock ? 'instock' : 'outofstock'
+            }
+          });
+        }
       }
 
       // e. Track Marketing Usage
@@ -418,7 +443,10 @@ export class OrderService {
         },
         customer: {
           select: { name: true, email: true }
-        }
+        },
+        shipments: true,
+        returns: true,
+        statusHistory: { orderBy: { createdAt: 'desc' } }
       },
     });
     return { success: true, data: orders };
@@ -488,7 +516,9 @@ export class OrderService {
         },
         addresses: true,
         customer: { select: { id: true, name: true, email: true, mobile: true } },
-        statusHistory: { orderBy: { createdAt: 'desc' } }
+        statusHistory: { orderBy: { createdAt: 'desc' } },
+        shipments: true,
+        returns: true
       },
     });
 
@@ -595,6 +625,77 @@ export class OrderService {
     );
 
     return rateData;
+  }
+
+  // Update Tracking (Admin)
+  async updateTracking(orderId: string, trackingData: any) {
+    const oId = Number(orderId);
+    const order = await this.prisma.order.findUnique({ where: { id: oId }, include: { shipments: true } });
+    if (!order) throw new NotFoundException('Order not found');
+
+    const { carrier, trackingNumber, trackingUrl } = trackingData;
+
+    return this.prisma.$transaction(async (tx) => {
+      let shipment;
+      if (order.shipments && order.shipments.length > 0) {
+        shipment = await tx.orderShipment.update({
+          where: { id: order.shipments[0].id },
+          data: { carrier, trackingNumber, trackingUrl }
+        });
+      } else {
+        shipment = await tx.orderShipment.create({
+          data: {
+            orderId: oId,
+            carrier,
+            trackingNumber,
+            trackingUrl,
+            status: 'shipped'
+          }
+        });
+      }
+
+      await tx.orderStatusHistory.create({
+        data: {
+          orderId: oId,
+          status: order.status,
+          notes: `Tracking updated: ${carrier || ''} ${trackingNumber || ''}`
+        }
+      });
+
+      return { success: true, data: shipment };
+    });
+  }
+
+  // Process Refund (Admin)
+  async processRefund(orderId: string, refundData: any) {
+    const oId = Number(orderId);
+    const order = await this.prisma.order.findUnique({ where: { id: oId } });
+    if (!order) throw new NotFoundException('Order not found');
+
+    const { amount, reason } = refundData;
+
+    return this.prisma.$transaction(async (tx) => {
+      const orderReturn = await tx.orderReturn.create({
+        data: {
+          returnNumber: `RET-${Date.now()}`,
+          orderId: oId,
+          status: 'processed',
+          type: 'refund',
+          refundAmount: Number(amount),
+          reason: reason || 'Manual Admin Refund'
+        }
+      });
+
+      await tx.orderStatusHistory.create({
+        data: {
+          orderId: oId,
+          status: order.status,
+          notes: `Partial refund processed: ₹${amount}. Reason: ${reason || 'N/A'}`
+        }
+      });
+
+      return { success: true, data: orderReturn };
+    });
   }
 }
 

@@ -5,6 +5,8 @@ import * as bcrypt from 'bcrypt';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import * as crypto from 'crypto';
+import * as nodemailer from 'nodemailer';
 
 type AuthRole = 'customer' | 'admin';
 
@@ -158,8 +160,96 @@ export class AuthService {
     }
   }
 
-  async resetCustomerPassword(resetPasswordDto: ResetPasswordDto) {
-    const { email, password } = resetPasswordDto;
+  async forgotPassword(email: string) {
+    const customer = await this.prisma.customer.findUnique({
+      where: { email },
+    });
+
+    if (!customer) {
+      // Don't leak whether the email exists or not, but for our case we can return success
+      return { success: true, message: 'If the email exists, a password reset link has been sent.' };
+    }
+
+    // Generate secure token
+    const token = crypto.randomBytes(32).toString('hex');
+    const hashedToken = await bcrypt.hash(token, 10);
+
+    // Store token in DB
+    await this.prisma.passwordResetToken.upsert({
+      where: { email },
+      update: {
+        token: hashedToken,
+        createdAt: new Date(),
+      },
+      create: {
+        email,
+        token: hashedToken,
+        createdAt: new Date(),
+      },
+    });
+
+    const resetLink = `${process.env.FRONTEND_URL || 'http://localhost:3002'}/reset-password?token=${token}&email=${encodeURIComponent(email)}`;
+    
+    // Setup NodeMailer
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: Number(process.env.SMTP_PORT),
+      secure: process.env.SMTP_SECURE === 'true', 
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
+
+    try {
+      if (process.env.SMTP_HOST && process.env.SMTP_USER) {
+        await transporter.sendMail({
+          from: `"Fylex Support" <${process.env.SMTP_USER}>`,
+          to: email,
+          subject: 'Password Reset Request',
+          html: `<p>Hello ${customer.name},</p><p>You requested a password reset. Click the link below to reset it:</p><p><a href="${resetLink}">${resetLink}</a></p><p>If you did not request this, please ignore this email.</p>`,
+        });
+        console.log(`Password reset email sent to ${email}`);
+      } else {
+        // Simulation mode
+        console.log(`\n========================================================`);
+        console.log(`[SIMULATED EMAIL] Password reset requested for: ${email}`);
+        console.log(`Reset Link: ${resetLink}`);
+        console.log(`========================================================\n`);
+      }
+    } catch (error) {
+      console.error('Failed to send email:', error);
+      // Even if email fails, return success to not leak errors/info to user
+    }
+
+    return { success: true, message: 'If the email exists, a password reset link has been sent.' };
+  }
+
+  async resetCustomerPassword(resetPasswordDto: ResetPasswordDto & { token?: string }) {
+    const { email, password, token } = resetPasswordDto;
+
+    if (!token) {
+      throw new BadRequestException('Token is required');
+    }
+
+    const resetRecord = await this.prisma.passwordResetToken.findUnique({
+      where: { email },
+    });
+
+    if (!resetRecord) {
+      throw new BadRequestException('Invalid or expired password reset token');
+    }
+
+    const isValidToken = await bcrypt.compare(token, resetRecord.token);
+    if (!isValidToken) {
+      throw new BadRequestException('Invalid or expired password reset token');
+    }
+
+    // Check expiration (e.g. 1 hour)
+    const tokenAge = Date.now() - new Date(resetRecord.createdAt!).getTime();
+    if (tokenAge > 3600000) {
+      throw new BadRequestException('Password reset token has expired');
+    }
 
     const customer = await this.prisma.customer.findUnique({
       where: { email },
@@ -176,7 +266,13 @@ export class AuthService {
         data: { password: hashedPassword },
       });
 
+      // Clear the token
+      await this.prisma.passwordResetToken.delete({
+        where: { email },
+      });
+
       return {
+        success: true,
         message: 'Password updated successfully',
         email,
       };

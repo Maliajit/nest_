@@ -218,6 +218,13 @@ export class CartService {
         });
       }
 
+      // Validate stock for new item
+      if (variant.manageStock) {
+        if (!variant.inStock || variant.qty < dto.quantity) {
+          throw new BadRequestException(`Not enough stock available for this item.`);
+        }
+      }
+
       // Create new item
       const newItem = await this.prisma.cartItem.create({
         data: {
@@ -255,6 +262,16 @@ export class CartService {
 
     if (!item || !ownerMatch) {
       throw new NotFoundException('Cart item not found');
+    }
+
+    const variant = await this.prisma.productVariant.findUnique({
+      where: { id: item.productVariantId }
+    });
+    
+    if (variant && variant.manageStock) {
+      if (!variant.inStock || variant.qty < dto.quantity) {
+        throw new BadRequestException(`Not enough stock available. Maximum available is ${variant.qty}.`);
+      }
     }
 
     const updatedItem = await this.prisma.cartItem.update({

@@ -52,9 +52,16 @@ export class AuthController {
     return result;
   }
 
+  @Post('forgot-password')
+  async forgotPassword(@Body() body: { email: string }) {
+    this.logger.log(`Forgot password request received for email=${body.email}`);
+    const result = await this.authService.forgotPassword(body.email);
+    return result;
+  }
+
   @Post('reset-password')
-  async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
-    this.logger.log(`Password reset request received for email=${resetPasswordDto.email}`);
+  async resetPassword(@Body() resetPasswordDto: ResetPasswordDto & { token?: string }) {
+    this.logger.log(`Password reset execution received for email=${resetPasswordDto.email}`);
     const result = await this.authService.resetCustomerPassword(resetPasswordDto);
     this.logger.log(`Password reset success for email=${resetPasswordDto.email}`);
     return result;

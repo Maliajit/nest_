@@ -6,12 +6,13 @@ import { MarketingModule } from '../marketing/marketing.module';
 import { OrderStatusHistoryService } from './order-status-history.service';
 import { ShippingService } from './shipping.service';
 import { ShiprocketService } from './shiprocket.service';
+import { InvoiceService } from './invoice.service';
 
 @Module({
   imports: [PrismaModule, MarketingModule],
   controllers: [OrderController],
-  providers: [OrderService, OrderStatusHistoryService, ShippingService, ShiprocketService],
-  exports: [OrderService, OrderStatusHistoryService, ShippingService, ShiprocketService],
+  providers: [OrderService, OrderStatusHistoryService, ShippingService, ShiprocketService, InvoiceService],
+  exports: [OrderService, OrderStatusHistoryService, ShippingService, ShiprocketService, InvoiceService],
 })
 export class OrderModule {}
 
