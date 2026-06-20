@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param, UploadedFiles, UseInterceptors, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Param, UploadedFiles, UseInterceptors, Delete, Body } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
@@ -14,7 +14,7 @@ export class MediaController {
   }
 
   @Post('upload')
-  @UseInterceptors(FilesInterceptor('file', 20, {
+  @UseInterceptors(FilesInterceptor('file', 500, {
     storage: diskStorage({
       destination: './uploads',
       filename: (req, file, cb) => {
@@ -25,9 +25,18 @@ export class MediaController {
   }))
   async uploadMedia(
     @UploadedFiles() files: Array<Express.Multer.File>,
-    @Param('category') category?: string
+    @Param('category') category?: string,
+    @Body('paths') pathsStr?: string
   ) {
-    return this.mediaService.uploadMultiple(files, category);
+    let paths: string[] = [];
+    if (pathsStr) {
+      try {
+        paths = JSON.parse(pathsStr);
+      } catch {
+        paths = [];
+      }
+    }
+    return this.mediaService.uploadMultiple(files, category, paths);
   }
 
   @Delete(':id')

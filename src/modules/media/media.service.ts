@@ -7,7 +7,7 @@ import { extname } from 'path';
 export class MediaService {
   constructor(private prisma: PrismaService) {}
 
-  async saveUploadedFile(file: Express.Multer.File) {
+  async saveUploadedFile(file: Express.Multer.File, folderPath: string = '/') {
     const ext = extname(file.originalname).toLowerCase();
     const media = await this.prisma.media.create({
       data: {
@@ -19,6 +19,7 @@ export class MediaService {
         fileSize: Number(file.size),
         disk: 'local',
         fileType: file.mimetype.split('/')[0], // 'image', 'video', etc.
+        folderPath: folderPath
       },
     });
     return { success: true, data: media };
@@ -96,9 +97,20 @@ export class MediaService {
     }
   }
 
-  async uploadMultiple(files: Array<Express.Multer.File>, category?: string) {
+  async uploadMultiple(files: Array<Express.Multer.File>, category?: string, paths: string[] = []) {
     const results = await Promise.all(
-      files.map(file => this.saveUploadedFile(file))
+      files.map((file, index) => {
+        let folderPath = '/';
+        if (paths[index]) {
+          // Extracts the folder path from a relative file path (e.g., 'Images/1.png' -> '/Images')
+          const parts = paths[index].split('/');
+          if (parts.length > 1) {
+            parts.pop(); // Remove the filename
+            folderPath = '/' + parts.join('/');
+          }
+        }
+        return this.saveUploadedFile(file, folderPath);
+      })
     );
     return { success: true, data: results.map(r => r.data) };
   }

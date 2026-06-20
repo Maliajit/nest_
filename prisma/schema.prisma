@@ -385,6 +385,7 @@ model Media {
   uploadedBy       Int?             @map("uploaded_by")
   uploaderType     String?          @map("uploader_type")
   metadata         String?
+  folderPath       String?          @default("/") @map("folder_path")
   createdAt        DateTime?        @map("created_at")
   updatedAt        DateTime?        @map("updated_at")
   deletedAt        DateTime?        @map("deleted_at")

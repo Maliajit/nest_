@@ -205,6 +205,7 @@ export class ProductService {
                 productId,
                 sku: variant.sku || `VAR-${Date.now()}-${Math.random()}`,
                 price: Number(variant.price || 0),
+                comparePrice: variant.comparePrice ? Number(variant.comparePrice) : null,
                 sellingPrice: Number(variant.price || 0),
                 qty: Number(variant.stock || variant.qty || 0),
                 inStock: (Number(variant.stock || variant.qty || 0)) > 0,
@@ -794,6 +795,7 @@ export class ProductService {
             const variantData: any = {
               sku: variant.sku || `VAR-${Date.now()}-${Math.random()}`,
               price: Number(variant.price || 0),
+              comparePrice: variant.comparePrice ? Number(variant.comparePrice) : null,
               sellingPrice: Number(variant.price || 0),
               qty: Number(variant.stock) || 0,
               inStock: (Number(variant.stock) || 0) > 0,
