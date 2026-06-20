@@ -83,10 +83,20 @@ export class ProductService {
       data.specialPrice = Number(rest.specialPrice);
     }
 
+    let baseSlug = data.slug || data.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    let finalSlug = baseSlug;
+    let slugExists = await this.prisma.product.findUnique({ where: { slug: finalSlug } });
+    let counter = 1;
+    while (slugExists) {
+      finalSlug = `${baseSlug}-${counter}`;
+      slugExists = await this.prisma.product.findUnique({ where: { slug: finalSlug } });
+      counter++;
+    }
+
     // Filter data to only include valid Prisma fields for Product
     const prismaData: any = {
       name: data.name,
-      slug: data.slug,
+      slug: finalSlug,
       sku: data.sku || data.productCode || `SKU-${Date.now()}`,
       productCode: data.productCode,
       productType: data.productType || 'simple',
@@ -646,6 +656,19 @@ export class ProductService {
       validFields.forEach(field => {
         if (prismaData[field] !== undefined) filteredPrismaData[field] = prismaData[field];
       });
+
+      if (filteredPrismaData.slug) {
+        let baseSlug = filteredPrismaData.slug;
+        let finalSlug = baseSlug;
+        let slugExists = await this.prisma.product.findFirst({ where: { slug: finalSlug, id: { not: productId } } });
+        let counter = 1;
+        while (slugExists) {
+          finalSlug = `${baseSlug}-${counter}`;
+          slugExists = await this.prisma.product.findFirst({ where: { slug: finalSlug, id: { not: productId } } });
+          counter++;
+        }
+        filteredPrismaData.slug = finalSlug;
+      }
 
       return await this.prisma.$transaction(async (tx) => {
         // 1. Update Basic Info
