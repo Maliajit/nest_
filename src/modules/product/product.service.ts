@@ -210,6 +210,7 @@ export class ProductService {
                 qty: Number(variant.stock || variant.qty || 0),
                 inStock: (Number(variant.stock || variant.qty || 0)) > 0,
                 isActive: true,
+                isSoldConfiguration: variant.isSoldConfiguration === true || variant.isSoldConfiguration === 'true',
               }
             });
 
@@ -800,6 +801,7 @@ export class ProductService {
               qty: Number(variant.stock) || 0,
               inStock: (Number(variant.stock) || 0) > 0,
               isActive: true,
+              isSoldConfiguration: variant.isSoldConfiguration === true || variant.isSoldConfiguration === 'true',
             };
 
             let v;

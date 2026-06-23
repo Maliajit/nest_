@@ -17,7 +17,9 @@ export class ProductFilterDto {
   @IsString()
   categoryId?: string;
 
-
+  @IsOptional()
+  @IsString()
+  status?: string;
 
   @IsOptional()
   @Type(() => Number)

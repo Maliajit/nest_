@@ -727,6 +727,7 @@ model ProductVariant {
   stockStatus         String               @default("instock") @map("stock_status")
   isActive            Boolean              @default(true) @map("is_active")
   isDefault           Boolean              @default(false) @map("is_default")
+  isSoldConfiguration Boolean              @default(false) @map("is_sold_configuration")
   combinationHash     String?              @map("combination_hash")
   weight              Float?
   length              Float?
